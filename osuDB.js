@@ -19,68 +19,86 @@ mongoose.connect('mongodb://127.0.0.1:27017/OSU', function (err) {
 module.exports = {
     lastDate: null,
     lastBeatmapId: null,
+    getNormalizedDifficulty: function (difficultyRating) {
+
+
+        /*
+         Below 1.5: Easy
+         Below 2.25: Normal
+         Below 3.75: Hard
+         Below 5.25: Insane
+         Above 5.25: Expert
+
+         */
+
+
+        var normalizedDifficulty = 0;
+        if (difficultyRating < 1.5) {
+            normalizedDifficulty = 1;
+        }
+        else if (difficultyRating < 2.25) {
+            normalizedDifficulty = 2;
+        }
+        else if (difficultyRating < 3.75) {
+            normalizedDifficulty = 3;
+        }
+        else if (difficultyRating < 5.25) {
+            normalizedDifficulty = 4;
+        }
+        else {
+            normalizedDifficulty = 5;
+        }
+        return normalizedDifficulty;
+    },
+    tryGetFile: function (beatmap) {
+
+        var urlToDownload = 'http://bloodcat.com/osu/s/' + beatmapSet_Ids
+    },
+    udpateBeatmap: function (webBeatmap) {
+
+        webBeatmap.difficulty = getNormalizedDifficulty(webBeatmap.difficultyrating);
+        webBeatmap.xFetchDate = moment();
+
+        //var file = fs.createWriteStream(pathOfWorking + 'osudownload_1.osz')
+        var beatmapFile;
+        var urlToDownload = 'http://bloodcat.com/osu/s/' + webBeatmap.beatmapset_id;
+        var httpGet = http.get(urlToDownload, function (response) {
+
+            response.pipe(beatmapFile);
+            webBeatmap.xFile = beatmapFile;
+            Beatmap.findOneAndUpdate({beatmap_id: webBeatmap.beatmap_id}, webBeatmap, {upsert: true}, function (err, updatedBMap) {
+
+            });
+        });
+
+    },
     writeBeatmaps: function (sr) {
         var that = this;
-        var dLastDate = Q.defer();
+        var isDone = Q.defer();
         var srJSON = JSON.parse(sr);
+
+        console.log(srJSON.length + ' beatmaps are been retrieved.');
+
         Q.when(isConnected).then(function () {
-            var momentum = function(date){
-                return moment(date).format('YYYY-MM-DD');
-            }
-            console.log(srJSON.length + ' beatmaps are been retrieved.');
-            var maxLastDateFound = null;
-            var lastBeatmapIdFound = null;
+
             for (var i = 0; i < srJSON.length; i++) {
 
-/*
-                Below 1.5: Easy
-                Below 2.25: Normal
-                Below 3.75: Hard
-                Below 5.25: Insane
-                Above 5.25: Expert
+                var webBeatmap = new Beatmap(srJSON[i]);
+                var beatmapId = webBeatmap.beatmap_id;
 
-  */
-                var difficulty = 0;
-                var difficultyRating = srJSON[i].difficultyrating;
-                if(difficultyRating<1.5){
-                    difficulty = 1;
-                }
-                else if(difficultyRating<2.25){
-                    difficulty = 2;
-                }
-                else if(difficultyRating<3.75){
-                    difficulty = 3;
-                }
-                else if(difficultyRating<5.25){
-                    difficulty = 4;
-                }
-                else{
-                    difficulty = 5;
-                }
-                srJSON[i].difficulty = difficulty;
-                Beatmap.findOneAndUpdate({beatmap_id: srJSON[i].beatmap_id}, srJSON[i], {upsert: true}, function (err, b) {
 
+                var webLastUpdate = moment(webBeatmap.last_update);
+
+                var databaseBeatmap = Beatmap.findOne({'beatmap_id': beatmapId}, function (err, databaseBeatmap) {
+                    if (null === bmap || moment(databaseBeatmap.last_update).isAfter(webLastUpdate)) {
+                        udpateBeatmap(webBeatmap);
+                    }
                 });
-                var b = new Beatmap(srJSON[i]);
-                if (momentum(b.approved_date) > maxLastDateFound || null === maxLastDateFound) {
-                    maxLastDateFound = momentum(b.approved_date);
-                }
-                if (b.beatmap_id > lastBeatmapIdFound || null === lastBeatmapIdFound) {
-                    lastBeatmapIdFound = b.beatmap_id;
-                }
-            }
-            if (that.lastDate === maxLastDateFound && that.lastBeatmapId === lastBeatmapIdFound) {
-                console.log('stop the process');
-                dLastDate.resolve(null);
-            }
-            else {
-                that.lastDate = maxLastDateFound;
-                that.lastBeatmapId = lastBeatmapIdFound;
-                console.log('continue the process. Last approved_date was ' + that.lastDate + ', last beatmap_id was ' + that.lastBeatmapId);
-                dLastDate.resolve(that.lastDate);
+
 
             }
+            isDone.resolve(null);
         });
-        return dLastDate.promise;
+        return isDone.promise;
     }
-}
+};

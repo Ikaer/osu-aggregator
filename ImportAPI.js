@@ -7,11 +7,13 @@ var osuDB = require('./osuDB');
 var mongoose = require('mongoose');
 var Beatmap = mongoose.model("Beatmap");
 var moment = require('moment');
-/*test*/
+
 module.exports = {
     config : null,
     start: function (initialDate, configFile) {
+
         console.log('starting to fetch beatmaps at ' + initialDate);
+
         this.config = configFile;
         this.getAndWriteBeatmaps(initialDate);
     },
@@ -20,7 +22,7 @@ module.exports = {
         Q.when(osuAPI.getBeatmaps(since, that.config)).then(function (sr) {
             var dLastDate = osuDB.writeBeatmaps(sr);
             var m = moment(since);
-           var mAndOneMonth = m.add(1, 'M');
+            var mAndOneMonth = m.add(1, 'M');
             if(mAndOneMonth.isBefore(moment())){
             var newDate = m.format('YYYY-MM-DD');
 
