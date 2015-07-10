@@ -29,7 +29,7 @@ module.exports = function() {
             "version"          : String,            // difficulty name
             "mode": Number,                    // game mode
             "xFetchDate": Date,
-            "xFile": Buffer
+            "xFile":  Buffer
         });
     mongoose.model('Beatmap', BeatmapSchema);
 };

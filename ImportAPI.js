@@ -26,13 +26,13 @@ module.exports = {
             if(mAndOneMonth.isBefore(moment())){
             var newDate = m.format('YYYY-MM-DD');
 
-            Q.when(dLastDate).then(function (lastDate) {
-                if (null !== lastDate) {
-                    setTimeout(function () {
-                        that.getAndWriteBeatmaps(newDate);
-                    }, 10000);
-                }
-            })
+            //Q.when(dLastDate).then(function (lastDate) {
+            //    if (null !== lastDate) {
+            //        setTimeout(function () {
+            //            that.getAndWriteBeatmaps(newDate);
+            //        }, 10000);
+            //    }
+            //})
             }
         })
     }

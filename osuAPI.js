@@ -13,7 +13,7 @@ module.exports = {
     getBeatmaps: function (since, config) {
         var d = Q.defer();
         var promise = d.promise;
-        var url = util.format('%s%s?k=%s&since=%s', this.osuAPIUrl, this.url.getBeatmap, config.apiKey, since);
+        var url = util.format('%s%s?k=%s&since=%s&limit=1', this.osuAPIUrl, this.url.getBeatmap, config.apiKey, since);
         console.log('calling API ' + url);
         request(url, function (error, response, body) {
             d.resolve(body);
