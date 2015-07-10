@@ -9,13 +9,15 @@ var Beatmap = mongoose.model("Beatmap");
 var moment = require('moment');
 /*test*/
 module.exports = {
-    start: function (initialDate) {
+    config : null,
+    start: function (initialDate, configFile) {
         console.log('starting to fetch beatmaps at ' + initialDate);
+        this.config = configFile;
         this.getAndWriteBeatmaps(initialDate);
     },
     getAndWriteBeatmaps: function (since) {
         var that = this;
-        Q.when(osuAPI.getBeatmaps(since)).then(function (sr) {
+        Q.when(osuAPI.getBeatmaps(since, that.config)).then(function (sr) {
             var dLastDate = osuDB.writeBeatmaps(sr);
             var m = moment(since);
            var mAndOneMonth = m.add(1, 'M');

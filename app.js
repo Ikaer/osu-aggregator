@@ -60,8 +60,11 @@ app.use(function (err, req, res, next) {
 
 module.exports = app;
 
+var fs = require('fs');
+var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 
 var importAPI = require('./importAPI');
-importAPI.start('2008-01-01');
+
+importAPI.start('2008-01-01', config);
 
 

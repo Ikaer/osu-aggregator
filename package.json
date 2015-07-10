@@ -13,6 +13,7 @@
     "express": "~4.12.4",
     "jade": "~1.9.2",
     "less-middleware": "1.0.x",
+    "moment": "^2.10.3",
     "mongoose": "~3.8.0",
     "morgan": "~1.5.3",
     "q": "^1.4.1",
