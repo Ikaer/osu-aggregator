@@ -7,7 +7,7 @@ var osuDB = require('./osuDB');
 var mongoose = require('mongoose');
 var Beatmap = mongoose.model("Beatmap");
 var moment = require('moment');
-
+/*test*/
 module.exports = {
     start: function (initialDate) {
         console.log('starting to fetch beatmaps at ' + initialDate);
