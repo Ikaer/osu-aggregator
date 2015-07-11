@@ -63,11 +63,9 @@ module.exports = app;
 var fs = require('fs');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 
-//var importAPI = require('./importAPI');
-//process.on('uncaughtException', function(err){
-//    console.log(err);
-//})
-//importAPI.start('2008-01-01', config);
+var importAPI = require('./importAPI');
+
+importAPI.start('2008-01-01', config, '2008-03-01');
 
 
 
@@ -80,7 +78,7 @@ var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 //zip.addLocalFile('osuDB.js');
 //zip.writeZip("test.zip");
 
-var zip = require('node-zip')();
+//var zip = require('node-zip')();
 
 
 //

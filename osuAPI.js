@@ -14,10 +14,10 @@ module.exports = {
         var d = Q.defer();
         var promise = d.promise;
         var url = util.format('%s%s?k=%s', this.osuAPIUrl, this.url.getBeatmap, config.apiKey);
-     //url += util.format('&since=%s', config.apiKey, since)
-     url += '&s=37705';
+        url += util.format('&since=%s', since)
+       // url += '&s=37705';
 
-        console.log('calling API ' + url);
+       console.log('calling opu api to get beatmaps since ' + since)
         request(url, function (error, response, body) {
             d.resolve(body);
         });

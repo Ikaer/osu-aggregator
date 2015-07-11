@@ -2,7 +2,7 @@
 
 
 require('./schema/beatmap.js')();
-require('./schema/beatmapSet.js')()
+require('./schema/beatmapSet.js')();
 //var JSZip = require('node-zip');
 var mongoose = require('mongoose');
 // grab the person model object
@@ -23,11 +23,12 @@ var _ = require('underscore');
 function OsuTools() {
     var that = this;
     that.bloodCatPile = [];
-    that.isConnected = Q.defer();
+    that.isConnectedDefer =  Q.defer();
+    that.isConnected = that.isConnectedDefer.promise;
     that.treatmentId = Guid.create();
     mongoose.connect('mongodb://127.0.0.1:27017/OSU', function (err) {
         if (err) throw err;
-        that.isConnected.resolve();
+        that.isConnectedDefer.resolve();
     });
 }
 OsuTools.prototype.doNextCall = function () {
@@ -37,7 +38,7 @@ OsuTools.prototype.doNextCall = function () {
         var nextCall = that.bloodCatPile[0];
         that.bloodCatPile.shift();
         nextCallHasbeenDone = true;
-        that.doCallToBlodcat(nextCall.id, nextCall.isDownloaded);
+        that.doCallToBloodcat(nextCall.id, nextCall.isDownloaded);
     }
     if (false === nextCallHasbeenDone) {
         setTimeout(function () {
@@ -45,7 +46,7 @@ OsuTools.prototype.doNextCall = function () {
         }, 5000);
     }
 };
-OsuTools.prototype.doCallToBlodcat = function (id, isDownloaded) {
+OsuTools.prototype.doCallToBloodcat = function (id, isDownloaded) {
     var that = this;
     http.get({
             hostname: "bloodcat.com",
@@ -74,7 +75,9 @@ OsuTools.prototype.doCallToBlodcat = function (id, isDownloaded) {
                     var zip = new AdmZip(buf);
                     var zipEntries = zip.getEntries();
                     isDownloaded.resolve(zipEntries);
-                    that.doNextCall();
+                    setTimeout(function(){
+                        that.doNextCall();
+                    }, 5000);
                 });
         });
 };
@@ -125,6 +128,10 @@ OsuTools.prototype.checkIfBeatmapMustBeUpdated = function (webBeatmap, beatmapsT
     var webLastUpdate = moment(webBeatmap.last_update);
     Beatmap.findOne({'beatmap_id': beatmapId}, function (err, databaseBeatmap) {
         if (null === databaseBeatmap || moment(databaseBeatmap.last_update).isAfter(webLastUpdate)) {
+
+            webBeatmap.difficulty = osuTools.getNormalizedDifficulty(webBeatmap.difficultyrating);
+            webBeatmap.xFetchDate = moment();
+            webBeatmap.xFileName = osuTools.buildFileName(webBeatmap);
             beatmapsToUpdate.push(webBeatmap);
         }
         d.resolve();
@@ -140,7 +147,11 @@ OsuTools.prototype.checkIfBeatmapSetMustBeUpdated = function (webBeatmapSet, bea
     if (false === isAlreadyInUpdates) {
         BeatmapSet.findOne(filter, function (err, databaseBeatmapSet) {
             if (null === databaseBeatmapSet || (moment(webBeatmapSet.last_update).isAfter(webLastUpdate) && databaseBeatmapSet.treatmentId !== that.treatmentId)) {
-                beatmapSetsToUpdate.push(webBeatmapSet)
+
+                webBeatmapSet.xFetchDate = moment();
+                webBeatmapSet.TreatmentId = that.treatmentId;
+
+                beatmapSetsToUpdate.push(webBeatmapSet);
 
             }
             d.resolve();
@@ -152,103 +163,92 @@ OsuTools.prototype.checkIfBeatmapSetMustBeUpdated = function (webBeatmapSet, bea
     return d.promise;
 };
 
-OsuTools.prototype.upsertBeatmapSet = function (beatmapSet, isUpdated) {
-    BeatmapSet.findOneAndUpdate({'beatmapset_id': beatmapSet.beatmapset_id}, beatmapSet, {upsert: true}, function () {
-        isUpdated.resolve();
+OsuTools.prototype.upsertBeatmapSetAndBeatmaps = function (thing, isUpdated) {
+    var dArray = [];
+    var beatmapSetPromise = Q.defer();
+    dArray.push(beatmapSetPromise.promise);
+    BeatmapSet.findOneAndUpdate({'beatmapset_id': thing.beatmapSet.beatmapset_id}, thing.beatmapSet, {upsert: true}, function () {
+        beatmapSetPromise.resolve();
     });
-};
-OsuTools.prototype.chainUpdateBeatmapSet = function (webBeatmapSet, isUpdated) {
+    _.each(thing.beatmaps, function (beatmap) {
+        var beatmapPromise = Q.defer();
+        dArray.push(beatmapPromise.promise);
+        Beatmap.findOneAndUpdate({'beatmap_id': beatmap.beatmap_id}, beatmap, {upsert: true}, function () {
+            beatmapPromise.resolve();
+        });
+    })
+
+    Q.allSettled(dArray).then(function () {
+        isUpdated.resolve();
+    })
+}
+OsuTools.prototype.chainUpdateBeatmapSetAndBeatmaps = function (thing, isUpdated) {
     var that = this;
 
-    Q.when(osuTools.getFilesFromBloodcat(webBeatmapSet.beatmapset_id)).then(function (zipEntries) {
+
+    Q.when(osuTools.getFilesFromBloodcat(thing.beatmapSet.beatmapset_id)).then(function (zipEntries) {
         for (var i = 0; i < zipEntries.length; i++) {
             var entryTitle = zipEntries[i].entryName;
-            console.log(entryTitle);
             if (false === S(entryTitle).endsWith('.osu')) {
-                webBeatmapSet.xFiles.push({
-                    name: entryTitle,
-                    data: zipEntries[i].getData()}
+                thing.beatmapSet.xFiles.push({
+                        name: entryTitle,
+                        data: zipEntries[i].getData()
+                    }
                 );
             }
-        }
-        webBeatmapSet.xFetchDate = moment();
-        webBeatmapSet.TreatmentId = that.treatmentId;
-        that.upsertBeatmapSet(webBeatmapSet, isUpdated);
-    });
-};
-
-OsuTools.prototype.upsertBeatmap = function (beatmap, isUpdated) {
-    Beatmap.findOneAndUpdate({'beatmap_id': beatmap.beatmap_id}, beatmap, {upsert: true}, function () {
-        isUpdated.resolve();
-    });
-};
-OsuTools.prototype.chainBeatmapUpdate = function (webBeatmap, isUpdated) {
-    var that = this;
-
-    webBeatmap.difficulty = osuTools.getNormalizedDifficulty(webBeatmap.difficultyrating);
-    webBeatmap.xFetchDate = moment();
-    webBeatmap.xFileName = osuTools.buildFileName(webBeatmap);
-    console.log('chain update of beatmap ' + webBeatmap.xFileName)
-    Q.when(osuTools.getFilesFromBloodcat(webBeatmap.beatmapset_id)).then(function (zipEntries) {
-            for (var i = 0; i < zipEntries.length; i++) {
-                var entryTitle = zipEntries[i].entryName;
-                if (entryTitle === webBeatmap.xFileName) {
-                    webBeatmap.xFile = {
+            else {
+                var beatmapForThisFile = _.where(thing.beatmaps, {xFileName: entryTitle});
+                if (beatmapForThisFile.length > 0) {
+                    beatmapForThisFile[0].xFile = {
                         name: entryTitle,
                         data: zipEntries[i].getData()
                     };
-                    if (webBeatmap.xFile === undefined) {
-                        console.log(webBeatmap.xFileName + ' has undefined file');
-                    }
+                }
+                else{
+                    console.log('cannot found beatmap for file ' + entryTitle);
                 }
             }
-            that.upsertBeatmap(webBeatmap, isUpdated);
         }
-    )
-    ;
+        that.upsertBeatmapSetAndBeatmaps(thing, isUpdated);
+        console.log('beatmapset ' + webBeatmapSet.beatmapset_id + ' has been updated');
+    });
 }
-;
 
-OsuTools.prototype.chainUpdate = function (thingsToUpdate, currentIndex, isBeatmapSetType, allIsUpdated) {
+OsuTools.prototype.chainUpdate = function (thingsToUpdate, currentIndex, allIsUpdated) {
     var that = this;
     var thing = thingsToUpdate[currentIndex];
     var isUpdated = allIsUpdated[currentIndex];
 
-    console.log('chain update: ' + thingsToUpdate.length + ', ' + currentIndex + ', ' + (isBeatmapSetType ? 'set' : 'beatmap') + ', ' + allIsUpdated.length);
-
-    if (true === isBeatmapSetType) {
-        this.chainUpdateBeatmapSet(thing, isUpdated);
-    }
-    else {
-        this.chainBeatmapUpdate(thing, isUpdated);
-    }
+    this.chainUpdateBeatmapSetAndBeatmaps(thing, isUpdated)
     if (currentIndex < thingsToUpdate.length - 1) {
         Q.when(isUpdated, function () {
             setTimeout(function () {
-                console.log('do next chain update of index ' + ( currentIndex + 1))
-                that.chainUpdate(thingsToUpdate, currentIndex + 1, isBeatmapSetType, allIsUpdated);
+                that.chainUpdate(thingsToUpdate, currentIndex + 1, allIsUpdated);
             }, 1000)
         });
     }
 
 };
-OsuTools.prototype.startUpdate = function (thingsToUpdate, isBeatmapSet) {
-    var d = Q.defer();
+OsuTools.prototype.startUpdate = function (thingsToUpdate, allIsDone) {
     var allIsUpdated = [];
+    var allPromise =[];
     for (var i = 0; i < thingsToUpdate.length; i++) {
-        allIsUpdated.push(Q.defer());
+        var dOne =Q.defer()
+        allIsUpdated.push(dOne);
+        allPromise.push(dOne.promise);
     }
     if (thingsToUpdate.length > 0) {
-        this.chainUpdate(thingsToUpdate, 0, isBeatmapSet, allIsUpdated);
-        Q.allSettled(allIsUpdated).then(function () {
-            d.resolve();
+        this.chainUpdate(thingsToUpdate, 0, allIsUpdated);
+        Q.allSettled(allPromise).then(function () {
+            console.log('this batch is done')
+            allIsDone.resolve();
         });
     }
     else {
-        d.resolve();
+        allIsDone.resolve();
     }
 
-    return d.promise;
+    return allIsDone.promise;
 };
 
 var osuTools = new OsuTools();
@@ -258,7 +258,7 @@ module.exports = {
     writeBeatmaps: function (sr) {
         var allIsDone = Q.defer();
         var srJSON = JSON.parse(sr);
-
+        console.log('start to check and write the ' + srJSON.length + ' beatmaps');
         Q.when(osuTools.isConnected).then(function () {
             var beatmapToUpdates = [];
             var beatmapSetToUpdates = [];
@@ -268,22 +268,25 @@ module.exports = {
                 var webBeatmap = new Beatmap(srJSON[i]);
                 allIsChecked.push(osuTools.checkIfBeatmapMustBeUpdated(webBeatmap, beatmapToUpdates));
 
-                if (_.where(testedBeatmapSet, function (x) {
-                        return x === webBeatmap.beatmapset_id
-                    }).length === 0) {
+                if (undefined === _.find(testedBeatmapSet, function(x){
+                        return x === webBeatmap.beatmapset_id;
+                    })) {
                     testedBeatmapSet.push(webBeatmap.beatmapset_id);
                     var webBeatmapSet = new BeatmapSet(srJSON[i]);
                     allIsChecked.push(osuTools.checkIfBeatmapSetMustBeUpdated(webBeatmapSet, beatmapSetToUpdates));
                 }
             }
             Q.allSettled(allIsChecked).then(function () {
-                var beatmapsAreUpdated = osuTools.startUpdate(beatmapToUpdates, false);
-                var beatmapsSetsAreUpdated = osuTools.startUpdate(beatmapSetToUpdates, true);
-
-                Q.allSettled([beatmapsAreUpdated, beatmapsSetsAreUpdated]).then(function () {
-                    allIsDone.resolve();
-
-                })
+                var beatmapsetsAndBeatmaps = [];
+                _.each(beatmapSetToUpdates, function (beatmapsSet) {
+                    var concat = {
+                        beatmapSet: beatmapsSet,
+                        beatmaps: _.where(beatmapToUpdates, {beatmapset_id: beatmapsSet.beatmapset_id})
+                    }
+                    beatmapsetsAndBeatmaps.push(concat)
+                });
+                console.log(beatmapSetToUpdates.length + ' beatmapsets and ' + beatmapToUpdates.length + ' beatmaps will be updated')
+                osuTools.startUpdate(beatmapsetsAndBeatmaps, allIsDone);
             });
         });
         return allIsDone.promise;

@@ -8,32 +8,40 @@ var mongoose = require('mongoose');
 var Beatmap = mongoose.model("Beatmap");
 var moment = require('moment');
 
-module.exports = {
-    config : null,
-    start: function (initialDate, configFile) {
-
-        console.log('starting to fetch beatmaps at ' + initialDate);
-
-        this.config = configFile;
-        this.getAndWriteBeatmaps(initialDate);
-    },
-    getAndWriteBeatmaps: function (since) {
-        var that = this;
-        Q.when(osuAPI.getBeatmaps(since, that.config)).then(function (sr) {
-            var dLastDate = osuDB.writeBeatmaps(sr);
-            var m = moment(since);
-            var mAndOneMonth = m.add(1, 'M');
-            if(mAndOneMonth.isBefore(moment())){
-            var newDate = m.format('YYYY-MM-DD');
-
-            //Q.when(dLastDate).then(function (lastDate) {
-            //    if (null !== lastDate) {
-            //        setTimeout(function () {
-            //            that.getAndWriteBeatmaps(newDate);
-            //        }, 10000);
-            //    }
-            //})
+function ImportAPI(initialDate, configFile, endDate) {
+    this.config = configFile;
+    this.currentDate = moment(initialDate);
+    this.endDate = null;
+    if (undefined !== endDate && null !== endDate) {
+        this.endDate = moment(endDate);
+    }
+}
+ImportAPI.prototype.getAndWriteBeatmaps = function () {
+    var that = this;
+    console.log('starting the process for date ' + this.currentDate.format('YYYY-MM-DD'));
+    Q.when(osuAPI.getBeatmaps(that.currentDate.format('YYYY-MM-DD'), that.config)).then(function (sr) {
+        var hasDoneWriting = osuDB.writeBeatmaps(sr);
+        Q.when(hasDoneWriting).then(function () {
+            var mAndOneMonth = that.currentDate.add(1, 'M');
+            if (mAndOneMonth.isBefore(moment()) && (null === that.endDate || mAndOneMonth.isBefore(that.endDate))) {
+                that.currentDate = mAndOneMonth;
+                setTimeout(function () {
+                    that.getAndWriteBeatmaps();
+                }, 10000);
             }
-        })
+            else {
+                console.log('all is done, process will exit now')
+                process.exit()
+            }
+        });
+    });
+};
+
+module.exports = {
+    config: null,
+    start: function (initialDate, configFile, endDate) {
+        console.log('starting to fetch beatmaps at ' + initialDate);
+        var importApi = new ImportAPI(initialDate, configFile, endDate);
+        importApi.getAndWriteBeatmaps();
     }
 }
