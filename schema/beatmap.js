@@ -29,7 +29,8 @@ module.exports = function() {
             "version"          : String,            // difficulty name
             "mode": Number,                    // game mode
             "xFetchDate": Date,
-            "xFile":  Buffer
+            "xFile":  { "name" : String, "data": Buffer},
+            "xFileName": String
         });
     mongoose.model('Beatmap', BeatmapSchema);
 };
