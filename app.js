@@ -65,53 +65,5 @@ var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 
 var importAPI = require('./importAPI');
 
-importAPI.start('2008-01-01', config, '2008-03-01');
-
-
-
-//var _ = require('underscore');
-//var Q = require('q');
-
-//var AdmZip = require('adm-zip');
-
-//var zip = new AdmZip();
-//zip.addLocalFile('osuDB.js');
-//zip.writeZip("test.zip");
-
-//var zip = require('node-zip')();
-
-
-//
-//require('./schema/beatmap.js')();
-//require('./schema/beatmapSet.js')();
-//var mongoose = require('mongoose');
-//// grab the person model object
-//var Beatmap = mongoose.model("Beatmap");
-//var BeatmapSet = mongoose.model("BeatmapSet");
-//
-//var beatmapSetIsReady = Q.defer();
-//var beatmapsAreReady = Q.defer();
-//mongoose.connect('mongodb://127.0.0.1:27017/OSU', function (err) {
-//    if (err) throw err;
-//    BeatmapSet.findOne({beatmapset_id: 37705}, function (err, bs) {
-//        _.each(bs.xFiles, function (xF, i) {
-//            console.log(xF.name);
-//            zip.file(xF.name, xF.data);
-//        });
-//        beatmapSetIsReady.resolve();
-//    });
-//    Beatmap.find({beatmapset_id: 37705}, function (err, maps) {
-//        _.each(maps, function (map, i) {
-//            console.log(map.xFile.name);
-//            zip.file(map.xFile.name, map.xFile.data);
-//        });
-//        beatmapsAreReady.resolve();
-//    });
-//    Q.when(beatmapSetIsReady.promise,beatmapsAreReady.promise).then(function(){
-//        var data = zip.generate({base64:false,compression:'DEFLATE'});
-//        fs.writeFileSync('test.osz', data, 'binary');
-//    })
-//});
-
-
+importAPI.start('2008-01-01', config, null);
 

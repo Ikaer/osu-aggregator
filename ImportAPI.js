@@ -18,7 +18,6 @@ function ImportAPI(initialDate, configFile, endDate) {
 }
 ImportAPI.prototype.getAndWriteBeatmaps = function () {
     var that = this;
-    console.log('starting the process for date ' + this.currentDate.format('YYYY-MM-DD'));
     Q.when(osuAPI.getBeatmaps(that.currentDate.format('YYYY-MM-DD'), that.config)).then(function (sr) {
         var hasDoneWriting = osuDB.writeBeatmaps(sr);
         Q.when(hasDoneWriting).then(function () {
@@ -40,7 +39,6 @@ ImportAPI.prototype.getAndWriteBeatmaps = function () {
 module.exports = {
     config: null,
     start: function (initialDate, configFile, endDate) {
-        console.log('starting to fetch beatmaps at ' + initialDate);
         var importApi = new ImportAPI(initialDate, configFile, endDate);
         importApi.getAndWriteBeatmaps();
     }

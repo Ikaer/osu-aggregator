@@ -12,9 +12,7 @@ module.exports = function() {
         "beatmapset_id"    : Number,
         "title"            : String,
         "last_update"      : Date,
-        "xFetchDate"       : Date,
-        "xFiles"            : [{"name": String, "data" : Buffer}],
-        "xTreatmentId"      : String
+        "xFetchDate"       : Date
     });
     mongoose.model('BeatmapSet', BeatmapSetSchema);
 };
