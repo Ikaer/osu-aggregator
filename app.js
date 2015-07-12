@@ -65,5 +65,5 @@ var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 
 var importAPI = require('./importAPI');
 
-importAPI.start('2008-01-01', config, null);
+importAPI.start('2007-09-01', config, null, true);
 

@@ -101,9 +101,7 @@ OsuTools.prototype.downloadFile = function (hostname, path, filePath) {
             })
                 .on('end', function () {
                     file.end();
-                    file.on('finish', function() {
-                        d.resolve();
-                    });
+                    d.resolve();
                 })
                 .on('error', function(e){
                     console.log(e);
