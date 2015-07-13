@@ -1,0 +1,13 @@
+{
+  "apiKey":"",
+  "stuffPath":"",
+  "mongodbPath" : "",
+  "timeoutToTransferFiles" : 500,
+  "maxTransfer" : 5,
+  "getOsz" : false,
+  "forceRedownload" : false,
+  "dateInf": "2007-09-01",
+  "dateSup": null,
+  "revert":true,
+  "timeoutForOsuAPI": 10000
+}
