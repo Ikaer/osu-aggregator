@@ -22,6 +22,7 @@ app.use(bodyParser.urlencoded({extended: false}));
 app.use(cookieParser());
 app.use(require('less-middleware')(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'public')));
+require( "console-stamp" )( console )
 
 app.use('/', routes);
 app.use('/users', users);
@@ -57,7 +58,9 @@ app.use(function (err, req, res, next) {
     });
 });
 
+if (process.env.NODE_ENV !== 'production'){
 
+}
 module.exports = app;
 
 var fs = require('fs');
@@ -65,5 +68,7 @@ var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 
 var importAPI = require('./importAPI');
 
-importAPI.start('2007-09-01', config, null, true);
-
+importAPI.start('2007-09-01', config, '2014-06-13', true);
+process.on('uncaughtException', function(e){
+    console.log(e);
+});

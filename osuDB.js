@@ -17,32 +17,37 @@ var util = require('util');
 var Guid = require('Guid');
 var _ = require('underscore');
 
+var nconf = require('nconf');
+nconf.file({file: 'config.json'});
 
 function OsuTools() {
     var that = this;
-    that.timeoutToTransferFiles = 500;
-    that.maxTransfer = 3;
-    that.forceRedownload = false;
+    that.timeoutToTransferFiles = nconf.get('timeoutToTransferFiles');
+    that.maxTransfer = nconf.get('maxTransfer');
+    that.getOsz = nconf.get('getOsz');
+    that.forceRedownload = nconf.get('forceRedownload');
+    that.basePath = nconf.get('stuffPath');
+
+
     that.currentTransferCount = 0;
+    that.oldNumber = 0;
     that.transferPile = [];
-    that.basePath = 'G:\\osu library\\';
     that.isConnectedDefer = Q.defer();
     that.isConnected = that.isConnectedDefer.promise;
-    that.treatmentId = Guid.create();
 
-    mongoose.connect('mongodb://127.0.0.1:27017/OSU', function (err) {
+    mongoose.connect(nconf.get('mongodbPath'), function (err) {
         if (err) throw err;
         that.isConnectedDefer.resolve();
     });
 }
 OsuTools.prototype.buildFilePath = function (id, endOfFile) {
     var that = this;
-    return that.basePath + id + '\\' + id + endOfFile;
+    return that.basePath + id + '/' + id + endOfFile;
 }
 OsuTools.prototype.getFilesInformation = function (id) {
     var that = this;
     osuTools.tryMakeDirSync(that.basePath + id);
-    return [{
+    var files = [{
         host: 'bloodcat.com',
         path: '/osu/s/' + id,
         filePath: that.buildFilePath(id, '.osz')
@@ -59,63 +64,107 @@ OsuTools.prototype.getFilesInformation = function (id) {
         path: '/preview/' + id + '.mp3',
         filePath: that.buildFilePath(id, '.mp3')
     }];
+    if (that.getOsz === false) {
+        files.shift();
+    }
+    return files;
 }
 OsuTools.prototype.doNextCall = function () {
     var that = this;
-    if (that.transferPile.length > 0) {
-        for (var i = 0; i < that.maxTransfer; i++) {
-            if (that.currentTransferCount < that.maxTransfer && that.transferPile.length > 0) {
-                var nextCall = that.transferPile[0];
-                that.currentTransferCount++;
-                that.transferPile.shift();
-                that.doCallToFiles(nextCall.id, nextCall.isDownloaded, nextCall.listOfFiles);
-                Q.when(nextCall.isDownloaded.promise).then(function () {
-                    that.currentTransferCount--;
-                });
+    try {
+        if (that.transferPile.length > 0) {
+            if (that.oldNumber !== that.transferPile.length) {
+                that.oldNumber = that.transferPile.length;
+                console.log(that.transferPile.length + ' encore dans la pile');
+            }
+            for (var i = 0; i < that.maxTransfer; i++) {
+                if (that.currentTransferCount < that.maxTransfer && that.transferPile.length > 0) {
+                    var nextCall = that.transferPile[0];
+                    that.currentTransferCount++;
+                    that.transferPile.shift();
+                    that.doCallToFiles(nextCall.id, nextCall.isDownloaded, nextCall.listOfFiles);
+                    Q.when(nextCall.isDownloaded.promise).then(function () {
+                        that.currentTransferCount--;
+                    });
+                }
             }
         }
+        setTimeout(function () {
+            that.doNextCall()
+        }, that.timeoutToTransferFiles);
     }
-    setTimeout(function () {
-        that.doNextCall()
-    }, that.timeoutToTransferFiles);
+    catch (e) {
+        console.log(e);
+    }
 };
 OsuTools.prototype.downloadFile = function (hostname, path, filePath) {
     var d = Q.defer();
-    http.get({
-            hostname: hostname,
-            port: 80,
-            path: path,
-            headers: {
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                "Accept-Encoding": "gzip, deflate, sdch",
-                "Accept-Language": "fr-FR,fr;q=0.8,en-US;q=0.6,en;q=0.4",
-                "Connection": "keep-alive",
-                "Host": hostname
+    try {
+        http.get({
+                hostname: hostname,
+                port: 80,
+                path: path,
+                headers: {
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                    "Accept-Encoding": "gzip, deflate, sdch",
+                    "Accept-Language": "fr-FR,fr;q=0.8,en-US;q=0.6,en;q=0.4",
+                    "Connection": "keep-alive",
+                    "Host": hostname
+                }
             }
-        }
-        , function (res) {
-            console.log('downloading ' + filePath);
-            var file = fs.createWriteStream(filePath);
-            res.on('data', function (chunk) {
-                file.write(chunk);
-            })
-                .on('end', function () {
-                    file.end();
-                    d.resolve();
-                })
-                .on('error', function(e){
+            , function (res) {
+                try {
+                    //  console.log('downloading ' + filePath);
+                    var file = fs.createWriteStream(filePath);
+                    res.on('data', function (chunk) {
+                        try {
+                            file.write(chunk);
+                        }
+                        catch (e) {
+                            console.log(e);
+                        }
+                    })
+                        .on('end', function () {
+                            try {
+                                file.end();
+                                d.resolve();
+                            }
+                            catch (e) {
+                                console.log(e);
+                            }
+                        })
+                        .
+                        on('error', function (e) {
+                            console.log(e);
+                        })
+                }
+                catch
+                    (e) {
                     console.log(e);
-                })
-
-        });
+                }
+            }
+            ,
+            function (err) {
+                console.log(err)
+            }
+        )
+        ;
+    }
+    catch
+        (e) {
+        console.log(e);
+    }
     return d.promise;
 }
-OsuTools.prototype.tryCheckFile = function (filePath) {
+OsuTools.prototype.tryCheckFile = function (filePath, last_update) {
     var ret = true;
     try {
-        fs.statSync(filePath);
+        var st = fs.statSync(filePath);
+        if (moment(st.mtime).isBefore(last_update)) {
+            ret = false;
+        }
     } catch (e) {
-        if(e.code != 'ENOENT') throw e;
+        if (e.code != 'ENOENT') throw e;
         else ret = false;
     }
     return ret;
@@ -127,12 +176,12 @@ OsuTools.prototype.tryMakeDirSync = function (path) {
         if (e.code != 'EEXIST') throw e;
     }
 };
-OsuTools.prototype.checkFiles = function (id) {
+OsuTools.prototype.checkFiles = function (id, last_update) {
     var that = this;
     var files = that.getFilesInformation(id);
     var atLeastOneMissing = false;
     _.each(files, function (f) {
-        var fileExists = false === that.forceRedownload && that.tryCheckFile(f.filePath)
+        var fileExists = false === that.forceRedownload && that.tryCheckFile(f.filePath, last_update)
         f.exists = fileExists;
         if (false === fileExists) atLeastOneMissing = true;
     });
@@ -158,6 +207,15 @@ OsuTools.prototype.addCallToGetFiles = function (beatmapSetId, d, listOfFiles) {
     // when listOfFiles is provided, only those ones will be download, its apart the update of database, mostly to double check.
     that.transferPile.push({id: beatmapSetId, isDownloaded: d, listOfFiles: listOfFiles ? listOfFiles : null});
 };
+
+OsuTools.prototype.getFiles = function (beatmapSetId) {
+    var that = this;
+    var d = Q.defer();
+    that.addCallToGetFiles(beatmapSetId, d);
+    return d.promise;
+};
+
+
 OsuTools.prototype.getNormalizedDifficulty = function (difficultyRating) {
     /*
      Below 1.5: Easy
@@ -185,12 +243,6 @@ OsuTools.prototype.getNormalizedDifficulty = function (difficultyRating) {
     }
     return normalizedDifficulty;
 };
-OsuTools.prototype.getFilesFromBloodcat = function (beatmapSetId) {
-    var that = this;
-    var d = Q.defer();
-    that.addCallToGetFiles(beatmapSetId, d);
-    return d.promise;
-};
 OsuTools.prototype.buildFileName = function (beatmap) {
     return util.format('%s - %s (%s) [%s].osu', beatmap.artist, beatmap.title, beatmap.creator, beatmap.version);
 };
@@ -200,6 +252,7 @@ OsuTools.prototype.checkIfBeatmapMustBeUpdated = function (jsonBeatmapSet, beatm
 
     var d = Q.defer();
     var firstBeatmap = jsonBeatmapSet.beatmaps[0];
+    var lastUpdate = moment(jsonBeatmapSet.beatmaps[0].last_update);
     var batchD = [];
 
     // checks for beatmaps
@@ -248,7 +301,7 @@ OsuTools.prototype.checkIfBeatmapMustBeUpdated = function (jsonBeatmapSet, beatm
         }
         else {
             // double check for files
-            that.checkFiles(firstBeatmap.beatmapset_id);
+            that.checkFiles(firstBeatmap.beatmapset_id, lastUpdate);
         }
         d.resolve();
     });
@@ -260,14 +313,14 @@ OsuTools.prototype.upsertBeatmapSetAndBeatmaps = function (thing, isUpdated) {
     var beatmapSetPromise = Q.defer();
     dArray.push(beatmapSetPromise.promise);
     BeatmapSet.findOneAndUpdate({'beatmapset_id': thing.beatmapSet.beatmapset_id}, thing.beatmapSet, {upsert: true}, function () {
-        console.log('beatmapset ' + thing.beatmapSet.beatmapset_id + ' updated in database')
+        //console.log('beatmapset ' + thing.beatmapSet.beatmapset_id + ' updated in database')
         beatmapSetPromise.resolve();
     });
     _.each(thing.beatmaps, function (beatmap) {
         var beatmapPromise = Q.defer();
         dArray.push(beatmapPromise.promise);
         Beatmap.findOneAndUpdate({'beatmap_id': beatmap.beatmap_id}, beatmap, {upsert: true}, function () {
-            console.log('beatmapset ' + thing.beatmapSet.beatmapset_id + ' / map ' + beatmap.beatmap_id + ' updated in database')
+            //console.log('beatmapset ' + thing.beatmapSet.beatmapset_id + ' / map ' + beatmap.beatmap_id + ' updated in database')
             beatmapPromise.resolve();
         });
     })
@@ -278,9 +331,9 @@ OsuTools.prototype.upsertBeatmapSetAndBeatmaps = function (thing, isUpdated) {
 }
 OsuTools.prototype.chainUpdateBeatmapSetAndBeatmaps = function (thing, isUpdated) {
     var that = this;
-    Q.when(osuTools.getFilesFromBloodcat(thing.beatmapSet.beatmapset_id)).then(function () {
+    Q.when(osuTools.getFiles(thing.beatmapSet.beatmapset_id)).then(function () {
         that.upsertBeatmapSetAndBeatmaps(thing, isUpdated);
-        console.log('beatmapset ' + thing.beatmapSet.beatmapset_id + ' has been updated');
+        //console.log('beatmapset ' + thing.beatmapSet.beatmapset_id + ' has been updated');
     });
 }
 
@@ -308,8 +361,6 @@ OsuTools.prototype.startUpdate = function (thingsToUpdate, allIsDone) {
     if (thingsToUpdate.length > 0) {
         this.chainUpdate(thingsToUpdate, 0, allIsUpdated);
         Q.allSettled(allPromise).then(function () {
-            console.log('this batch is done')
-            console.log('===============================================================================')
             allIsDone.resolve();
         });
     }
@@ -327,36 +378,40 @@ module.exports = {
     writeBeatmaps: function (sr) {
         var allIsDone = Q.defer();
         var srJSON = JSON.parse(sr);
-
-        var beatmapsetsIdAndBeatmaps = [];
-        _.each(srJSON, function (x) {
-            if (undefined === _.find(beatmapsetsIdAndBeatmaps, function (beatmapset) {
-                    return beatmapset.beatmapset_id === x.beatmapset_id;
-                })) {
-                var toInsert = {
-                    beatmapset_id: x.beatmapset_id,
-                    beatmapset_lastupdate: x.last_update,
-                    beatmaps: _.where(srJSON, {'beatmapset_id': x.beatmapset_id})
-                };
-                beatmapsetsIdAndBeatmaps.push(toInsert);
-            }
-        });
-
-
-        console.log('start to check and write the ' + srJSON.length + ' beatmaps');
-        Q.when(osuTools.isConnected).then(function () {
-            var beatmapSetToUpdates = [];
-            var allIsChecked = [];
-            for (var i = 0; i < beatmapsetsIdAndBeatmaps.length; i++) {
-                allIsChecked.push(osuTools.checkIfBeatmapMustBeUpdated(beatmapsetsIdAndBeatmaps[i], beatmapSetToUpdates));
-            }
-            Q.allSettled(allIsChecked).then(function () {
-                console.log(beatmapSetToUpdates.length + ' beatmap sets will be updated')
-                beatmapSetToUpdates = _.sortBy( beatmapSetToUpdates, 'beatmapset_id');
-                osuTools.startUpdate(beatmapSetToUpdates, allIsDone);
+        if (srJSON.length === 0) {
+            allIsDone.resolve();
+        }
+        else {
+            var beatmapsetsIdAndBeatmaps = [];
+            _.each(srJSON, function (x) {
+                if (undefined === _.find(beatmapsetsIdAndBeatmaps, function (beatmapset) {
+                        return beatmapset.beatmapset_id === x.beatmapset_id;
+                    })) {
+                    var toInsert = {
+                        beatmapset_id: x.beatmapset_id,
+                        beatmapset_lastupdate: x.last_update,
+                        beatmaps: _.where(srJSON, {'beatmapset_id': x.beatmapset_id})
+                    };
+                    beatmapsetsIdAndBeatmaps.push(toInsert);
+                }
             });
-        });
-        return allIsDone.promise;
+
+
+            console.log('start to check and write the ' + srJSON.length + ' beatmaps');
+            Q.when(osuTools.isConnected).then(function () {
+                var beatmapSetToUpdates = [];
+                var allIsChecked = [];
+                for (var i = 0; i < beatmapsetsIdAndBeatmaps.length; i++) {
+                    allIsChecked.push(osuTools.checkIfBeatmapMustBeUpdated(beatmapsetsIdAndBeatmaps[i], beatmapSetToUpdates));
+                }
+                Q.allSettled(allIsChecked).then(function () {
+                    console.log(beatmapSetToUpdates.length + ' beatmap sets will be updated')
+                    beatmapSetToUpdates = _.sortBy(beatmapSetToUpdates, 'beatmapset_id');
+                    osuTools.startUpdate(beatmapSetToUpdates, allIsDone);
+                });
+            });
+            return allIsDone.promise;
+        }
     }
 };
 

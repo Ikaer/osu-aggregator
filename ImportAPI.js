@@ -7,53 +7,85 @@ var osuDB = require('./osuDB');
 var mongoose = require('mongoose');
 var Beatmap = mongoose.model("Beatmap");
 var moment = require('moment');
+var nconf = require('nconf');
+var request = require('request');
+var util = require('util')
 
-function ImportAPI(initialDate, configFile, endDate, revert) {
-    this.config = configFile;
-    this.revert = revert;
-    this.startDate = moment(initialDate);
-    this.currentDate = this.revert ? moment() : moment(initialDate);
+nconf.file({file: 'config.json'});
 
-    this.endDate = null;
-    if (undefined !== endDate && null !== endDate) {
-        this.endDate = moment(endDate);
-    }
-}
-ImportAPI.prototype.nextDate = function () {
+function ImportAPI() {
     var that = this;
-    if (true === that.revert) {
-        var mLessOneMonth = that.currentDate.subtract(1, 'M')
-        if (mLessOneMonth.isAfter(that.startDate)) {
-            that.currentDate = mLessOneMonth;
+
+    that.osuAPIUrl = 'https://osu.ppy.sh';
+    that.urls = {
+        getBeatmap: '/api/get_beatmaps'
+    };
+    that.apiKey = nconf.get('apiKey');
+    that.revert = nconf.get('revert');
+    that.startDate = nconf.get('dateInf') ? moment(nconf.get('dateInf')) : moment('2007-09-01');
+    that.endDate = nconf.get('dateSup') ? moment(nconf.get('dateSup')) : moment();
+    that.currentDate = that.revert ? that.endDate : that.startDate
+    that.dates = [];
+    var doContinue = true;
+    while (true === doContinue) {
+        that.dates.push(that.currentDate.format('YYYY-MM-DD'));
+        if (true === that.revert) {
+            that.currentDate = that.currentDate.subtract(1, 'M');
+            doContinue = that.currentDate.isAfter(that.startDate);
         }
         else {
-            console.log('all is done, process will exit now')
-            process.exit()
+            that.currentDate = that.currentDate.add(1, 'M');
+            doContinue = that.currentDate.isBefore(that.endDate);
         }
+    }
+    if (true === that.revert) {
+        that.dates.push(that.startDate.format('YYYY-MM-DD'));
     }
     else {
-        var mAndOneMonth = that.currentDate.add(1, 'M');
-        if (mAndOneMonth.isBefore(moment()) && (null === that.endDate || mAndOneMonth.isBefore(that.endDate))) {
-            that.currentDate = mAndOneMonth;
+        that.dates.push(that.endDate.format('YYYY-MM-DD'));
+    }
+
+    that.currentIndex = 0;
+}
+
+
+ImportAPI.prototype.getBeatmaps = function(since) {
+    var that = this;
+    var d = Q.defer();
+    var promise = d.promise;
+    var url = util.format('%s%s?k=%s', that.osuAPIUrl, that.urls.getBeatmap, that.apiKey);
+    url += util.format('&since=%s', since)
+    console.log('calling opu api to get beatmaps since ' + since)
+    request(url, function (error, response, body) {
+        if (error) {
+            console.log(error);
+        } else {
+            d.resolve(body);
         }
-        else {
-            console.log('all is done, process will exit now')
-            process.exit()
-        }
+    });
+    return promise;
+}
+
+ImportAPI.prototype.nextDate = function () {
+    var that = this;
+    if(that.currentIndex < that.dates.length - 1){
+        that.currentIndex++;
+    }
+    else{
+        that.currentIndex = 0;
     }
 }
 ImportAPI.prototype.getAndWriteBeatmaps = function () {
     var that = this;
-    Q.when(osuAPI.getBeatmaps(that.currentDate.format('YYYY-MM-DD'), that.config)).then(function (sr) {
-       var hasDoneWriting = osuDB.writeBeatmaps(sr);
-       // var tmpHasDoneWriting = Q.defer();
-       //var hasDoneWriting = tmpHasDoneWriting.promise;
-       // tmpHasDoneWriting.resolve();
+    Q.when(that.getBeatmaps(that.dates[that.currentIndex])).then(function (sr) {
+        var hasDoneWriting = osuDB.writeBeatmaps(sr);
         Q.when(hasDoneWriting).then(function () {
+            console.log('this batch is done')
+            console.log('===============================================================================')
             that.nextDate();
-            setTimeout(function () {
+           setTimeout(function(){
                 that.getAndWriteBeatmaps();
-            }, 10000);
+            },  nconf.get('timeoutForOsuAPI'));
         });
     });
 };

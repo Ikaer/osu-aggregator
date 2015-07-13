@@ -5,6 +5,7 @@
 var request = require('request');
 var Q = require('q')
 var util = require('util')
+
 module.exports = {
     osuAPIUrl: 'https://osu.ppy.sh',
     url: {
@@ -19,7 +20,11 @@ module.exports = {
 
        console.log('calling opu api to get beatmaps since ' + since)
         request(url, function (error, response, body) {
+         if(error){
+          console.log(error);
+         }else{
             d.resolve(body);
+         }
         });
         return promise;
     }
