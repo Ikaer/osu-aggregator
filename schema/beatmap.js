@@ -27,8 +27,7 @@ module.exports = function() {
             "title"            : String,      // song name
             "total_length"     : Number,                 // seconds from first note to last note including breaks
             "version"          : String,            // difficulty name
-            "mode": Number,                    // game mode
-            "xFetchDate": Date,
+            "mode": Number,
             "xFileName": String
         });
     mongoose.model('Beatmap', BeatmapSchema);

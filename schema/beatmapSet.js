@@ -11,8 +11,7 @@ module.exports = function() {
         "artist"           : String,
         "beatmapset_id"    : Number,
         "title"            : String,
-        "last_update"      : Date,
-        "xFetchDate"       : Date
+        "last_update"      : Date
     });
     mongoose.model('BeatmapSet', BeatmapSetSchema);
 };

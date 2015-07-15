@@ -2,16 +2,16 @@
  * Created by Xavier on 29/06/2015.
  */
 var Q = require('q');
-var osuAPI = require('./osuAPI')
 var osuDB = require('./osuDB');
 var mongoose = require('mongoose');
 var Beatmap = mongoose.model("Beatmap");
 var moment = require('moment');
 var nconf = require('nconf');
+nconf.file({file: 'config.json'});
 var request = require('request');
 var util = require('util')
 
-nconf.file({file: 'config.json'});
+var colors = require('colors')
 
 function ImportAPI() {
     var that = this;
@@ -55,10 +55,10 @@ ImportAPI.prototype.getBeatmaps = function(since) {
     var promise = d.promise;
     var url = util.format('%s%s?k=%s', that.osuAPIUrl, that.urls.getBeatmap, that.apiKey);
     url += util.format('&since=%s', since)
-    console.log('calling opu api to get beatmaps since ' + since)
+    console.log(url.bgBlue.white)
     request(url, function (error, response, body) {
         if (error) {
-            console.log(error);
+            console.error(error);
         } else {
             d.resolve(body);
         }
@@ -78,10 +78,11 @@ ImportAPI.prototype.nextDate = function () {
 ImportAPI.prototype.getAndWriteBeatmaps = function () {
     var that = this;
     Q.when(that.getBeatmaps(that.dates[that.currentIndex])).then(function (sr) {
-        var hasDoneWriting = osuDB.writeBeatmaps(sr);
+        var srJSON = JSON.parse(sr);
+        var hasDoneWriting = osuDB.writeBeatmaps(srJSON);
         Q.when(hasDoneWriting).then(function () {
-            console.log('this batch is done')
-            console.log('===============================================================================')
+            console.log('this batch is done'.green.bold)
+            console.log('==============================================================================='.green.bold)
             that.nextDate();
            setTimeout(function(){
                 that.getAndWriteBeatmaps();
@@ -92,8 +93,8 @@ ImportAPI.prototype.getAndWriteBeatmaps = function () {
 
 module.exports = {
     config: null,
-    start: function (initialDate, configFile, endDate, revert) {
-        var importApi = new ImportAPI(initialDate, configFile, endDate, revert);
+    start: function () {
+        var importApi = new ImportAPI();
         importApi.getAndWriteBeatmaps();
     }
 }
