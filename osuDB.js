@@ -1,6 +1,11 @@
 //fs.writeFile('file' + i + '.osu', zip.readAsText(zipEntries[i]), function (err) {   var a = 2; });
+// date todo:
+//"2014-10-15",
+//"2014-09-15",
+try{
 require('./schema/beatmap.js')();
 require('./schema/beatmapSet.js')();
+
 
 var mongoose = require('mongoose');
 
@@ -110,31 +115,31 @@ OsuTools.prototype.doHttpCall = function (nextCall) {
     };
     that.pileOfCurrentCalls.push(traceOfDef)
 
-    Q.when(d.promise).timeout(10000, 'timeout').then(function () {
-        that.pileOfCurrentCalls = _.reject(that.pileOfCurrentCalls, function (cd) {
-            return cd.id !== traceOfDef.id;
-        });
-    }, function(err){
+    Q.when(d.promise).timeout(100000, 'timeout').then(function () { }, function(err){
         if(err.message == 'timeout'){
             console.error('Take too much time to resolve %s. Go elsewhere', nextCall.options.hostname + nextCall.options.path)
         }
         else{
             console.error(err);
         }
+    }).finally(function(){
+        that.pileOfCurrentCalls = _.reject(that.pileOfCurrentCalls, function (cd) {
+        return cd.id !== traceOfDef.id;
     });
+    })
     console.log('%s'.bgBlue.white, nextCall.options.hostname + nextCall.options.path)
     try {
         http.get(nextCall.options, function (res) {
             res.on('error', function (e) {
-                d.reject(err);
+                d.reject(e);
                 console.error(e);
             });
             if (res.statusCode === 200) {
                 nextCall.callback(res, d);
             }
             else{
-                d.reject(err);
-                nextCall.callbackError(err);
+                d.reject(res.statusCode);
+                nextCall.callbackError(res.statusCode);
             }
         }, function (err) {
             d.reject(err);
@@ -143,7 +148,7 @@ OsuTools.prototype.doHttpCall = function (nextCall) {
         });
     }
     catch (e) {
-        d.reject(err);
+        d.reject(e);
         console.error(e);
     }
     return d.promise;
@@ -279,8 +284,8 @@ function OsuFile(type, id, lastUpdate) {
                         setTimeout(function(){
                             var tempFileIsOk = true;
                             try {
-                                var statOfTempFile = fs.statSync();
-                                statOfTempFile = st["size"];
+                                var statOfTempFile = fs.statSync(that.tempFilePath);
+                                statOfTempFile = statOfTempFile["size"];
                                 if(statOfTempFile === 0){
                                     tempFileIsOk = false;
                                     console.error('%s file is zero after write. Do next.', that.tempFilePath);
@@ -338,7 +343,7 @@ function OsuFile(type, id, lastUpdate) {
         res.on('data', function(chunk){
             buffer.write(chunk)
         })
-        res.on('end', function(chunk){
+        res.on('end', function(){
             console.log('read conmplete')
             releaseHttp.resolve();
         })
@@ -466,10 +471,11 @@ OsuThing.prototype.upsertInDatabase = function () {
 OsuThing.prototype.queueDownload = function () {
     var that = this;
     var d = Q.defer();
-    _.each(that.files.list, function (f) {
+    var filesToDownload = _.where(that.files.list, {toDownload:true});
+    _.each(filesToDownload, function (f) {
         osuTools.queueNewCall(f.httpOptions, f.callbackToWrite, f.callbackToWriteError)
     });
-    Q.allSettled(_.map(that.files.list, function (f) {
+    Q.allSettled(_.map(filesToDownload, function (f) {
         return f.isDownloaded;
     })).then(function () {
         d.resolve(true);
@@ -616,4 +622,7 @@ process.on('uncaughtException', function (e) {
     }
 });
 
-
+}
+catch(e){
+    console.error(e);
+}
