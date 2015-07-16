@@ -110,23 +110,31 @@ OsuTools.prototype.doHttpCall = function (nextCall) {
     };
     that.pileOfCurrentCalls.push(traceOfDef)
 
-    Q.when(d.promise).then(function () {
+    Q.when(d.promise).timeout(10000, 'timeout').then(function () {
         that.pileOfCurrentCalls = _.reject(that.pileOfCurrentCalls, function (cd) {
             return cd.id !== traceOfDef.id;
         });
-    })
-
+    }, function(err){
+        if(err.message == 'timeout'){
+            console.error('Take too much time to resolve %s. Go elsewhere', nextCall.options.hostname + nextCall.options.path)
+        }
+        else{
+            console.error(e);
+        }
+    });
     console.log('%s'.bgBlue.white, nextCall.options.hostname + nextCall.options.path)
     try {
         http.get(nextCall.options, function (res) {
             res.on('error', function (e) {
+                d.reject(err);
                 console.error(e);
-            })
+            });
             if (res.statusCode === 200) {
                 nextCall.callback(res, d);
             }
             else{
-                nextCall.callback(res, d);
+                d.reject(err);
+                nextCall.callbackError(err);
             }
         }, function (err) {
             d.reject(err);
@@ -135,6 +143,7 @@ OsuTools.prototype.doHttpCall = function (nextCall) {
         });
     }
     catch (e) {
+        d.reject(err);
         console.error(e);
     }
     return d.promise;
@@ -267,29 +276,51 @@ function OsuFile(type, id, lastUpdate) {
                 .on('end', function () {
                     try {
                         fileWriter.end();
-                        var readOfTemp = fs.createReadStream(that.tempFilePath);
-                        var writeOfReadFile = fs.createWriteStream(that.filePath);
-                        that._isDownloaded.resolve(true);
-                        readOfTemp.pipe(writeOfReadFile);
-                        readOfTemp.on('end', function () {
-                            fs.unlink(that.tempFilePath);
-                        });
-                        releaseHttp.resolve();
-                        console.log('%s has been written'.bgCyan.white, that.filePath)
+                        setTimeout(function(){
+                            var tempFileIsOk = true;
+                            try {
+                                var statOfTempFile = fs.statSync();
+                                statOfTempFile = st["size"];
+                                if(statOfTempFile === 0){
+                                    tempFileIsOk = false;
+                                    console.error('%s file is zero after write. Do next.', that.tempFilePath);
+                                    fs.unlink(that.tempFilePath);
+                                    releaseHttp.resolve();
+                                }
+                            }
+                            catch(e){
+                                tempFileIsOk = false;
+                                console.error(e);
+                            }
+                            if(tempFileIsOk === true){
+                            var readOfTemp = fs.createReadStream(that.tempFilePath);
+                            var writeOfReadFile = fs.createWriteStream(that.filePath);
+                            that._isDownloaded.resolve(true);
+
+                            readOfTemp.pipe(writeOfReadFile);
+                            readOfTemp.on('end', function () {
+                                fs.unlink(that.tempFilePath);
+                            });
+                            releaseHttp.resolve();
+                            console.log('%s has been written'.bgCyan.white, that.filePath)
+                            }
+                        },2000);
                     }
                     catch (e) {
                         console.error(e);
+                        releaseHttp.resolve();
                     }
 
                 })
                 .
                 on('error', function (e) {
                     console.error(e);
+                    releaseHttp.resolve();
                 })
         }
-        catch
-            (e) {
+        catch(e) {
             console.error(e);
+            releaseHttp.resolve();
         }
     }
     this.callbackToWriteError = function (error) {
