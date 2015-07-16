@@ -119,7 +119,7 @@ OsuTools.prototype.doHttpCall = function (nextCall) {
             console.error('Take too much time to resolve %s. Go elsewhere', nextCall.options.hostname + nextCall.options.path)
         }
         else{
-            console.error(e);
+            console.error(err);
         }
     });
     console.log('%s'.bgBlue.white, nextCall.options.hostname + nextCall.options.path)
