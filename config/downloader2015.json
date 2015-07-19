@@ -5,7 +5,7 @@
   "timeoutToTransferFiles" : 2000,
   "maxTransfer" : 1,
   "forceRedownload" : false,
-  "dateInf": "2015-01-01",
+  "dateInf": "2015-06-01",
   "dateSup": null,
   "revert":true,
   "timeoutForOsuAPI": 10000,
