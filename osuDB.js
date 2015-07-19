@@ -3,13 +3,9 @@
 //"2014-10-15",
 //"2014-09-15",
 try {
-
-
     var mongoose = require('mongoose');
 
     var Beatmap = mongoose.model("Beatmap");
-    var BeatmapSet = mongoose.model("BeatmapSet");
-//var http = require('http');
 
     var Q = require('q');
     var moment = require('moment');
@@ -22,7 +18,6 @@ try {
     nconf.file({file: 'config.json'});
 
     var http = require('http-debug').http;
-
 
     function OsuTools() {
         var that = this;
@@ -421,16 +416,14 @@ try {
     };
 
     function OsuThing(firstBeatmap, othersBeatmaps) {
-
-        this.beatmapSet = new BeatmapSet(firstBeatmap);
-        this.id = this.beatmapSet.beatmapset_id;
+        this.id = firstBeatmap.beatmapset_id;
         this.beatmaps = _.map(othersBeatmaps, function (b) {
             var webBeatmap = new Beatmap(b);
             webBeatmap.difficulty = osuTools.getNormalizedDifficulty(webBeatmap.difficultyrating);
             webBeatmap.xFileName = osuTools.buildFileName(webBeatmap);
             return webBeatmap;
         })
-        this.files = new OsuFiles(this.id, this.beatmapSet.last_update);
+        this.files = new OsuFiles(this.id, firstBeatmap.last_update);
         this.toUpdate = false;
 
     }
@@ -439,13 +432,6 @@ try {
         var isUpserted = Q.defer();
         var that = this;
         var dArray = [];
-        var beatmapSetPromise = Q.defer();
-        dArray.push(beatmapSetPromise.promise);
-       // console.log('[%s] update database'.bgMagenta.white, that.id)
-        BeatmapSet.findOneAndUpdate({'beatmapset_id': that.beatmapSet.beatmapset_id}, that.beatmapSet, {upsert: true}, function () {
-           // console.log('beatmapset %s updated in database'.bgMagenta.white, that.beatmapSet.beatmapset_id)
-            beatmapSetPromise.resolve(true);
-        });
         _.each(that.beatmaps, function (beatmap) {
             var beatmapPromise = Q.defer();
             dArray.push(beatmapPromise.promise);
@@ -509,7 +495,7 @@ try {
         // checks for beatmapset
         var dBeatmapSet = Q.defer();
         databaseVerifications.push(dBeatmapSet.promise);
-        BeatmapSet.findOne({beatmapset_id: that.beatmaps[0].beatmapset_id}, function (err, databaseBeatmapSet) {
+        Beatmap.findOne({beatmapset_id: that.beatmaps[0].beatmapset_id}, function (err, databaseBeatmapSet) {
             var toUpdate = (null === databaseBeatmapSet || (moment(databaseBeatmapSet.last_update).isAfter(moment(that.beatmaps[0].last_update))));
             dBeatmapSet.resolve(toUpdate);
         });

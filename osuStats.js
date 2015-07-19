@@ -1,7 +1,6 @@
 var mongoose = require('mongoose');
 
 var Beatmap = mongoose.model("Beatmap");
-var BeatmapSet = mongoose.model("BeatmapSet");
 var Q = require('q');
 var https = require('https');
 var cheerio = require('cheerio');
@@ -99,10 +98,6 @@ function OsuStats() {
 
                         update.negativeUserRating = parseFloat($beatmap.find('.negative').css('width'));
 
-
-                        BeatmapSet.update({'beatmapset_id': beatmapset_id}, update, {muli: true}, function (err, raw) {
-                            if (err) console.log(err)
-                        });
                         Beatmap.update({'beatmapset_id': beatmapset_id}, update, {multi: true}, function (err, docs) {
                             if (err) console.log(err)
                             else {
@@ -139,7 +134,7 @@ function OsuStats() {
 
     }
     this.crawlSpecific = function () {
-        var query = BeatmapSet.findOne({beatmapset_id: {$lt: that.currentBeatmapId}});
+        var query = Beatmap.findOne({beatmapset_id: {$lt: that.currentBeatmapId}});
 
         if (that.useCrawlDate) {
             query.sort({'xLastCrawl': 1, 'beatmapset_id': -1});

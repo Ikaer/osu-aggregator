@@ -70,7 +70,6 @@ var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var mongoose = require('mongoose');
 
 require('./schema/beatmap.js')();
-require('./schema/beatmapSet.js')();
 
 var osuStats = require('./osuStats');
 var importAPI = require('./importAPI');
