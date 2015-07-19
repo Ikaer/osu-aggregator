@@ -18,8 +18,8 @@ nconf.file({file: 'config.json'});
 function OsuStats() {
     var that = this;
     this.currentPage = 1;
-    this.timeout =  nconf.get('stuffPath');
-    this.currentBeatmapId = 330175 //500000;
+    this.timeout =  nconf.get('updateStatsTimeout');
+    this.currentBeatmapId = 500000;
     this.baseUrl = 'https://osu.ppy.sh/p/beatmaplist?';
     for (var i = 1; i <= 125; i++) {
 
