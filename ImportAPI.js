@@ -13,7 +13,9 @@ var configFilePath =nconf.get('config')
 if(undefined === configFilePath || null === configFilePath || '' === configFilePath){
     configFilePath = 'config.json';
 }
+
 nconf.file(configFilePath);
+
 var request = require('request');
 var util = require('util')
 

@@ -13,5 +13,6 @@
   "updateStatsTimeout": 500,
   "useCrawlDate": false,
   "startCrawlingServer": true,
-  "startFileUpdater":false
+  "startFileUpdater":false,
+  "crawler_startingId": 50000
 }

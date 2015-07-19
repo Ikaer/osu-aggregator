@@ -21,7 +21,9 @@ try {
     if(undefined === configFilePath || null === configFilePath || '' === configFilePath){
         configFilePath = 'config.json';
     }
+
     nconf.file(configFilePath);
+
 
     var http = require('http-debug').http;
 

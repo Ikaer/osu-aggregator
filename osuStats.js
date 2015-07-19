@@ -20,11 +20,13 @@ var configFilePath =nconf.get('config')
 if(undefined === configFilePath || null === configFilePath || '' === configFilePath){
     configFilePath = 'config.json';
 }
+
 nconf.file(configFilePath);
+
 function OsuStats() {
     var that = this;
     this.timeout = nconf.get('updateStatsTimeout');
-    this.currentBeatmapId = 10000000000;
+    this.currentBeatmapId = nconf.get('crawler_startingId');
     this.baseUrl = 'https://osu.ppy.sh/';
     this.useCrawlDate = nconf.get('useCrawlDate');
 
