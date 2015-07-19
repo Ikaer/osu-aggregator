@@ -71,8 +71,8 @@ var mongoose = require('mongoose');
 
 require('./schema/beatmap.js')();
 
-var osuStats = require('./osuStats');
-var importAPI = require('./importAPI');
+
+
 var https = require('https');
 
 
@@ -91,9 +91,11 @@ nconf.file(configFilePath);
 mongoose.connect(nconf.get('mongodbPath'), function (err) {
     if (err) throw err;
     if (nconf.get('startCrawlingServer')) {
+        var osuStats = require('./osuStats');
         osuStats.start();
     }
     if (nconf.get('startFileUpdater')) {
+        var importAPI = require('./importAPI');
         importAPI.start();
     }
 });
