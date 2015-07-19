@@ -28,7 +28,12 @@ module.exports = function() {
             "total_length"     : Number,                 // seconds from first note to last note including breaks
             "version"          : String,            // difficulty name
             "mode": Number,
-            "xFileName": String
+            "xFileName": String,
+            "xLastCrawl": Date,
+            "playCount": Number,
+            "favouritedCount": Number,
+            "tags":[String],
+            "negativeUserRating":Number
         });
     mongoose.model('Beatmap', BeatmapSchema);
 };

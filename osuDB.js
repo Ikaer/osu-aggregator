@@ -3,8 +3,6 @@
 //"2014-10-15",
 //"2014-09-15",
 try {
-    require('./schema/beatmap.js')();
-    require('./schema/beatmapSet.js')();
 
 
     var mongoose = require('mongoose');
@@ -60,10 +58,8 @@ try {
         that.deferredId = 0;
         that.pileOfCurrentCalls = [];
 
-        mongoose.connect(nconf.get('mongodbPath'), function (err) {
-            if (err) throw err;
-            that.isConnectedDefer.resolve(true);
-        });
+
+        that.isConnectedDefer.resolve(true);
 
 
         this.fileTypes = {
@@ -121,7 +117,7 @@ try {
                 return cd.id !== traceOfDef.id;
             });
         })
-        console.log('%s'.bgBlue.white, nextCall.options.hostname + nextCall.options.path)
+        //console.log('%s'.bgBlue.white, nextCall.options.hostname + nextCall.options.path)
         try {
             http.get(nextCall.options, function (res) {
                 res.on('error', function (e) {
@@ -268,7 +264,7 @@ try {
         this.downloadReason = '';
         this.callbackToWrite = function (res, releaseHttp) {
             try {
-                console.log('%s is going to be be written'.bgCyan.white, that.filePath);
+              //  console.log('%s is going to be be written'.bgCyan.white, that.filePath);
                 try {
                     var fileWriter = fs.createWriteStream(that.tempFilePath);
                 }
@@ -391,7 +387,7 @@ try {
         }
         Q.when(this.isChecked).then(function () {
             if (that.toDownload === true) {
-                console.log('File %s ', that.filePath, that.downloadReason);
+               // console.log('File %s ', that.filePath, that.downloadReason);
             }
         })
     }
@@ -445,16 +441,16 @@ try {
         var dArray = [];
         var beatmapSetPromise = Q.defer();
         dArray.push(beatmapSetPromise.promise);
-        console.log('[%s] update database'.bgMagenta.white, that.id)
+       // console.log('[%s] update database'.bgMagenta.white, that.id)
         BeatmapSet.findOneAndUpdate({'beatmapset_id': that.beatmapSet.beatmapset_id}, that.beatmapSet, {upsert: true}, function () {
-            console.log('beatmapset %s updated in database'.bgMagenta.white, that.beatmapSet.beatmapset_id)
+           // console.log('beatmapset %s updated in database'.bgMagenta.white, that.beatmapSet.beatmapset_id)
             beatmapSetPromise.resolve(true);
         });
         _.each(that.beatmaps, function (beatmap) {
             var beatmapPromise = Q.defer();
             dArray.push(beatmapPromise.promise);
             Beatmap.findOneAndUpdate({'beatmap_id': beatmap.beatmap_id}, beatmap, {upsert: true}, function () {
-                console.log('beatmapset %s / map %s updated in database'.bgMagenta.white, that.beatmapSet.beatmapset_id, beatmap.beatmap_id)
+              //  console.log('beatmapset %s / map %s updated in database'.bgMagenta.white, that.beatmapSet.beatmapset_id, beatmap.beatmap_id)
                 beatmapPromise.resolve(true);
             });
         })
@@ -531,7 +527,7 @@ try {
                 var filesAreOk = !(_.where(that.files, {toDownload: true}).length > 0);
                 that.toUpdate = (false === databaseIsOk || false === filesAreOk || false === directoryIsOk);
                 if (that.toUpdate === true) {
-                    console.log('[%s] toUpdate: %s, files ok: %s, directory ok: %s, database ok: %s'.red, that.id, that.toUpdate, filesAreOk, directoryIsOk, databaseIsOk)
+                   // console.log('[%s] toUpdate: %s, files ok: %s, directory ok: %s, database ok: %s'.red, that.id, that.toUpdate, filesAreOk, directoryIsOk, databaseIsOk)
                 }
                 d.resolve(true);
             }).fail(function () {

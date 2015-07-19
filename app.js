@@ -67,9 +67,23 @@ module.exports = app;
 
 var fs = require('fs');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+var mongoose = require('mongoose');
 
+require('./schema/beatmap.js')();
+require('./schema/beatmapSet.js')();
+
+var osuStats = require('./osuStats');
 var importAPI = require('./importAPI');
 
 
-importAPI.start();
+var nconf = require('nconf');
+nconf.file({file: 'config.json'});
+mongoose.connect(nconf.get('mongodbPath'), function (err) {
+    if (err) throw err;
+    osuStats.start();
+    importAPI.start();
+});
+
+
+
 
