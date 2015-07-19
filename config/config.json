@@ -1,14 +1,19 @@
 {
   "apiKey":"d5d11123e677e4fde474e0887f5ce80710d423a3",
   "stuffPath":"G:/osu library/",
+  "tempFolder":"temp",
   "mongodbPath" : "mongodb://127.0.0.1:27017/OSU",
   "timeoutToTransferFiles" : 2000,
   "maxTransfer" : 1,
   "forceRedownload" : false,
-  "dateInf": "2015-01-01",
+  "dateInf": "2015-06-19",
   "dateSup": null,
   "revert":true,
   "timeoutForOsuAPI": 10000,
   "activeFileSizeCheck": false,
-  "startFileUpdater":true
+  "updateStatsTimeout": 500,
+  "useCrawlDate": false,
+  "startCrawlingServer": false,
+  "startFileUpdater":true,
+  "crawler_startingId": 50000
 }

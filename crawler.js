@@ -18,12 +18,12 @@ nconf.argv();
 var configFilePath =nconf.get('config')
 
 if(undefined === configFilePath || null === configFilePath || '' === configFilePath){
-    configFilePath = 'config.json';
+    configFilePath = 'config/config.json';
 }
 
 nconf.file(configFilePath);
 
-function OsuStats() {
+function Crawler() {
     var that = this;
     this.timeout = nconf.get('updateStatsTimeout');
     this.currentBeatmapId = nconf.get('crawler_startingId');
@@ -155,9 +155,9 @@ function OsuStats() {
         that.crawlSpecific();
     }
 }
-var osuStats = new OsuStats();
+var crawler = new Crawler();
 module.exports = {
     start: function () {
-        osuStats.start();
+        crawler.start();
     }
 };
