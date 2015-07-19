@@ -18,7 +18,7 @@ nconf.file({file: 'config.json'});
 function OsuStats() {
     var that = this;
     this.timeout = nconf.get('updateStatsTimeout');
-    this.currentBeatmapId = 500000;
+    this.currentBeatmapId = 10000000000;
     this.baseUrl = 'https://osu.ppy.sh/';
     this.useCrawlDate = nconf.get('useCrawlDate');
 
@@ -136,7 +136,7 @@ function OsuStats() {
                 that.requestPage('b/' + that.currentBeatmapId + '&m=0', that.currentBeatmapId);
             }
             else {
-                that.currentBeatmapId = 500000;
+                that.currentBeatmapId = 10000000000;
             }
         });
         setTimeout(function () {
