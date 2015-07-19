@@ -1,6 +1,3 @@
-
-
-
 var mongoose = require('mongoose');
 
 var Beatmap = mongoose.model("Beatmap");
@@ -18,12 +15,36 @@ nconf.file({file: 'config.json'});
 function OsuStats() {
     var that = this;
     this.currentPage = 1;
-    this.timeout =  nconf.get('updateStatsTimeout');
+    this.timeout = nconf.get('updateStatsTimeout');
     this.currentBeatmapId = 500000;
     this.baseUrl = 'https://osu.ppy.sh/p/beatmaplist?';
+    this.pageIndex = [];
+    this.useCrawlDate = nconf.get('useCrawlDate');
+    this.urlsToCrawl = [];
     for (var i = 1; i <= 125; i++) {
-
+        that.pageIndex.push(i);
     }
+    this.sorting = {
+        title: 0,
+        artist: 1,
+        creator: 2,
+        //difficulty:3
+        ranked: 4
+    }
+    this.sortingDirection = {
+        asc: 0,
+        desc: 1
+    }
+    _.each(that.pageIndex, function (page) {
+        _.each(that.sorting, function (s) {
+            _.each(that.sortingDirection, function (o) {
+                that.urlsToCrawl.push(util.format('page=%ss=%so=%', page, s, o));
+                console.log(util.format('page=%s&s=%s&o=%s', page, s, o))
+            })
+        })
+    })
+
+
     this.requestPage = function (query) {
         https.get(that.baseUrl + query, function (res) {
             res.on('error', function (e) {
@@ -61,13 +82,13 @@ function OsuStats() {
                             if ($(smallDetails[i]).hasClass('icon-heart') && (i + 1) < smallDetails.length) {
                                 var favoriteStr = S($(smallDetails[i + 1]).text());
                                 favoriteStr.replaceAll(',', '');
-                                update.favouritedCount = parseInt(favoriteStr);
+                                update.favouritedCount = parseInt(favoriteStr.toStrintg(), 10);
 
                             }
                             if ($(smallDetails[i]).hasClass('icon-play') && (i + 1) < smallDetails.length) {
                                 var playCountStr = S($(smallDetails[i + 1]).text());
-                                playCountStr.replaceAll(',', '');
-                                update.playCount = parseInt(playCountStr);
+                                playCountStr = playCountStr.replaceAll(',', '');
+                                update.playCount = parseInt(playCountStr.toStrintg(), 10);
                             }
                         }
 
@@ -93,7 +114,7 @@ function OsuStats() {
 
                     });
                     Q.allSettled(updatesDone).then(function () {
-                        console.log(util.format('%s / %s beatmaps found for %s',  updatedCount, beatmaps.length,query).bgYellow.black)
+                        console.log(util.format('%s / %s beatmaps found for %s', updatedCount, beatmaps.length, query).bgYellow.black)
                     })
                 }
             });
@@ -120,7 +141,12 @@ function OsuStats() {
     this.crawlSpecific = function () {
         var query = BeatmapSet.findOne({beatmapset_id: {$lt: that.currentBeatmapId}});
 
-        query.sort({'xLastCrawl': 1, 'beatmapset_id': -1});
+        if (that.useCrawlDate) {
+            query.sort({'xLastCrawl': 1, 'beatmapset_id': -1});
+        }
+        else {
+            query.sort({'beatmapset_id': -1});
+        }
         query.limit(100);
         query.exec(function (err, beatmapSet) {
             if (err) return console.error(err);
