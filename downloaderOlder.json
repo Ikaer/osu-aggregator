@@ -5,14 +5,10 @@
   "timeoutToTransferFiles" : 2000,
   "maxTransfer" : 1,
   "forceRedownload" : false,
-  "dateInf": "2007-09-01",
-  "dateSup": "2014-10-15",
+  "dateInf": "2007-01-01",
+  "dateSup": "2014-01-01",
   "revert":true,
   "timeoutForOsuAPI": 10000,
   "activeFileSizeCheck": false,
-  "updateStatsTimeout": 500,
-  "useCrawlDate": false,
-  "startCrawlingServer": false,
-  "startFileUpdater":true,
-  "crawler_startingId": 50000
+  "startFileUpdater":true
 }
