@@ -73,7 +73,7 @@ require('./schema/beatmap.js')();
 
 var osuStats = require('./osuStats');
 var importAPI = require('./importAPI');
-
+var https = require('https');
 
 var nconf = require('nconf');
 nconf.file({file: 'config.json'});

@@ -30,10 +30,16 @@ module.exports = function() {
             "mode": Number,
             "xFileName": String,
             "xLastCrawl": Date,
+            // from website
             "playCount": Number,
+            "playSuccess": Number,
             "favouritedCount": Number,
+            "genre":String,
+            "language":String,
+            "negativeUserRating":Number,
+            "positiveUserRating":Number,
             "tags":[String],
-            "negativeUserRating":Number
+            "submitted_date":Date
         });
     mongoose.model('Beatmap', BeatmapSchema);
 };

@@ -10,6 +10,6 @@
   "revert":true,
   "timeoutForOsuAPI": 10000,
   "activeFileSizeCheck": false,
-  "updateStatsTimeout": 4000,
+  "updateStatsTimeout": 10000,
   "useCrawlDate": false
 }
