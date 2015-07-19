@@ -13,14 +13,14 @@ var S = require('string');
 var _ = require('underscore');
 require('colors');
 var util = require('util');
-
+var nconf = require('nconf');
+nconf.file({file: 'config.json'});
 function OsuStats() {
     var that = this;
     this.currentPage = 1;
-    this.timeout = 2000;
+    this.timeout =  nconf.get('stuffPath');
     this.currentBeatmapId = 330175 //500000;
     this.baseUrl = 'https://osu.ppy.sh/p/beatmaplist?';
-    this.pageUrls = [];
     for (var i = 1; i <= 125; i++) {
 
     }

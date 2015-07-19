@@ -304,7 +304,7 @@ try {
                                 readOfTemp.on('end', function () {
                                     fs.unlink(that.tempFilePath);
                                 });
-                                console.log('%s has been written'.bgCyan.white, that.filePath)
+                               // console.log('%s has been written'.bgCyan.white, that.filePath)
                             }
                         }, 2000);
                     }

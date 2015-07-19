@@ -9,5 +9,6 @@
   "dateSup": "2014-10-15",
   "revert":true,
   "timeoutForOsuAPI": 10000,
-  "activeFileSizeCheck": false
+  "activeFileSizeCheck": false,
+  "updateStatsTimeout": 4000,
 }
