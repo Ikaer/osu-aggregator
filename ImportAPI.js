@@ -7,7 +7,13 @@ var mongoose = require('mongoose');
 var Beatmap = mongoose.model("Beatmap");
 var moment = require('moment');
 var nconf = require('nconf');
-nconf.file({file: 'config.json'});
+nconf.argv();
+var configFilePath =nconf.get('config')
+
+if(undefined === configFilePath || null === configFilePath || '' === configFilePath){
+    configFilePath = 'config.json';
+}
+nconf.file(configFilePath);
 var request = require('request');
 var util = require('util')
 

@@ -12,6 +12,6 @@
   "activeFileSizeCheck": false,
   "updateStatsTimeout": 500,
   "useCrawlDate": false,
-  "startCrawlingServer": true,
-  "startFileUpdater":false
+  "startCrawlingServer": false,
+  "startFileUpdater":true
 }

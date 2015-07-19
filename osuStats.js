@@ -14,7 +14,13 @@ var _ = require('underscore');
 require('colors');
 var util = require('util');
 var nconf = require('nconf');
-nconf.file({file: 'config.json'});
+nconf.argv();
+var configFilePath =nconf.get('config')
+
+if(undefined === configFilePath || null === configFilePath || '' === configFilePath){
+    configFilePath = 'config.json';
+}
+nconf.file(configFilePath);
 function OsuStats() {
     var that = this;
     this.timeout = nconf.get('updateStatsTimeout');

@@ -15,7 +15,13 @@ try {
     require('colors');
 
     var nconf = require('nconf');
-    nconf.file({file: 'config.json'});
+    nconf.argv();
+    var configFilePath =nconf.get('config')
+
+    if(undefined === configFilePath || null === configFilePath || '' === configFilePath){
+        configFilePath = 'config.json';
+    }
+    nconf.file(configFilePath);
 
     var http = require('http-debug').http;
 

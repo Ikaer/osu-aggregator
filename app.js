@@ -75,12 +75,27 @@ var osuStats = require('./osuStats');
 var importAPI = require('./importAPI');
 var https = require('https');
 
+
 var nconf = require('nconf');
-nconf.file({file: 'config.json'});
+ nconf.argv();
+var configFilePath =nconf.get('config')
+
+if(undefined === configFilePath || null === configFilePath || '' === configFilePath){
+    configFilePath = 'config.json';
+}
+
+nconf.file(configFilePath);
+
+
+
 mongoose.connect(nconf.get('mongodbPath'), function (err) {
     if (err) throw err;
-    osuStats.start();
-    importAPI.start();
+    if (nconf.get('startCrawlingServer')) {
+        osuStats.start();
+    }
+    if (nconf.get('startFileUpdater')) {
+        importAPI.start();
+    }
 });
 
 
