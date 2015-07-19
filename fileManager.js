@@ -19,7 +19,7 @@ try {
     var configFilePath =nconf.get('config')
 
     if(undefined === configFilePath || null === configFilePath || '' === configFilePath){
-        configFilePath = 'config.json';
+        configFilePath = 'config/config.json';
     }
 
     nconf.file(configFilePath);
@@ -27,7 +27,7 @@ try {
 
     var http = require('http-debug').http;
 
-    function OsuTools() {
+    function FileManager() {
         var that = this;
 
         that.timeoutToTransferFiles = nconf.get('timeoutToTransferFiles');
@@ -35,7 +35,7 @@ try {
         that.forceRedownload = nconf.get('forceRedownload');
         that.basePath = nconf.get('stuffPath');
 
-        that.basePathTemp = that.basePath + 'temp';
+        that.basePathTemp = that.basePath +  nconf.get('tempFolder');
         try {
             fs.mkdirSync(that.basePathTemp);
         }
@@ -97,7 +97,7 @@ try {
         }
     }
 
-    OsuTools.prototype.doHttpCall = function (nextCall) {
+    FileManager.prototype.doHttpCall = function (nextCall) {
         var d = Q.defer();
         var that = this;
         that.deferredId++;
@@ -143,7 +143,7 @@ try {
     }
 
 
-    OsuTools.prototype.doNextCall = function () {
+    FileManager.prototype.doNextCall = function () {
         var that = this;
         try {
             if (that.transferPile.length > 0) {
@@ -168,7 +168,7 @@ try {
             console.error(e);
         }
     };
-    OsuTools.prototype.queueNewCall = function (requestOptions, success, fail) {
+    FileManager.prototype.queueNewCall = function (requestOptions, success, fail) {
         var that = this;
         that.transferPile.push({
             options: requestOptions,
@@ -176,7 +176,7 @@ try {
             callbackError: fail
         })
     }
-    OsuTools.prototype.getNormalizedDifficulty = function (difficultyRating) {
+    FileManager.prototype.getNormalizedDifficulty = function (difficultyRating) {
         /*
          Below 1.5: Easy
          Below 2.25: Normal
@@ -203,10 +203,10 @@ try {
         }
         return normalizedDifficulty;
     };
-    OsuTools.prototype.buildFileName = function (beatmap) {
+    FileManager.prototype.buildFileName = function (beatmap) {
         return util.format('%s - %s (%s) [%s].osu', beatmap.artist, beatmap.title, beatmap.creator, beatmap.version);
     };
-    OsuTools.prototype.releaseDefers = function () {
+    FileManager.prototype.releaseDefers = function () {
         var that = this;
         console.log('REALEASING THE DEFERS ! (%s)'.bgRed.bold.black, that.pileOfCurrentCalls.length)
         _.each(that.pileOfCurrentCalls, function (cd) {
@@ -214,16 +214,16 @@ try {
         });
     }
 
-    var osuTools = new OsuTools();
-    osuTools.doNextCall();
+    var fileManager = new FileManager();
+    fileManager.doNextCall();
     //console.log('start to look at transfer pile'.red)
     function OsuFile(type, id, lastUpdate) {
         var that = this;
         this.id = id;
-        this.host = osuTools.fileTypes[type].host;
-        this.path = osuTools.fileTypes[type].path(id);
-        this.filePath = osuTools.basePath + id + '/' + id + osuTools.fileTypes[type].suffix;
-        this.tempFilePath = osuTools.basePath + 'temp/' + id + osuTools.fileTypes[type].suffix;
+        this.host = fileManager.fileTypes[type].host;
+        this.path = fileManager.fileTypes[type].path(id);
+        this.filePath = fileManager.basePath + id + '/' + id + fileManager.fileTypes[type].suffix;
+        this.tempFilePath = fileManager.basePath + 'temp/' + id + fileManager.fileTypes[type].suffix;
         try {
             fs.statSync(this.tempFilePath);
             fs.unlinkSync(this.tempFilePath);
@@ -377,8 +377,8 @@ try {
                     this.downloadReason = 'file does not exist.'
                 }
             }
-            if (this.toDownload === false && osuTools.activeFileSizeCheck === true) {
-                osuTools.queueNewCall(this.httpOptions, this.callbackToCheckSize, this.callbackToCheckSizeError);
+            if (this.toDownload === false && fileManager.activeFileSizeCheck === true) {
+                fileManager.queueNewCall(this.httpOptions, this.callbackToCheckSize, this.callbackToCheckSizeError);
             }
             else {
                 that._isChecked.resolve(true)
@@ -397,7 +397,7 @@ try {
 
 
     function OsuFiles(beatmapSetId, lastUpdate) {
-        this.baseDir = osuTools.basePath + beatmapSetId;
+        this.baseDir = fileManager.basePath + beatmapSetId;
         this.osz = new OsuFile('osz', beatmapSetId, lastUpdate);
         this.largeImage = new OsuFile('largeImage', beatmapSetId, lastUpdate);
         this.image = new OsuFile('image', beatmapSetId, lastUpdate);
@@ -427,8 +427,8 @@ try {
         this.id = firstBeatmap.beatmapset_id;
         this.beatmaps = _.map(othersBeatmaps, function (b) {
             var webBeatmap = new Beatmap(b);
-            webBeatmap.difficulty = osuTools.getNormalizedDifficulty(webBeatmap.difficultyrating);
-            webBeatmap.xFileName = osuTools.buildFileName(webBeatmap);
+            webBeatmap.difficulty = fileManager.getNormalizedDifficulty(webBeatmap.difficultyrating);
+            webBeatmap.xFileName = fileManager.buildFileName(webBeatmap);
             return webBeatmap;
         })
         this.files = new OsuFiles(this.id, firstBeatmap.last_update);
@@ -460,7 +460,7 @@ try {
         var d = Q.defer();
         var filesToDownload = _.where(that.files.list, {toDownload: true});
         _.each(filesToDownload, function (f) {
-            osuTools.queueNewCall(f.httpOptions, f.callbackToWrite, f.callbackToWriteError)
+            fileManager.queueNewCall(f.httpOptions, f.callbackToWrite, f.callbackToWriteError)
         });
         Q.allSettled(_.map(filesToDownload, function (f) {
             return f.isDownloaded;
@@ -605,7 +605,7 @@ try {
     process.on('uncaughtException', function (e) {
         console.log(e);
         if (e.code === 'ECONNRESET') {
-            osuTools.releaseDefers();
+            fileManager.releaseDefers();
         }
     });
 
