@@ -21,28 +21,28 @@ function OsuStats() {
     this.pageIndex = [];
     this.useCrawlDate = nconf.get('useCrawlDate');
     this.urlsToCrawl = [];
-    for (var i = 1; i <= 125; i++) {
-        that.pageIndex.push(i);
-    }
-    this.sorting = {
-        title: 0,
-        artist: 1,
-        creator: 2,
-        //difficulty:3
-        ranked: 4
-    }
-    this.sortingDirection = {
-        asc: 0,
-        desc: 1
-    }
-    _.each(that.pageIndex, function (page) {
-        _.each(that.sorting, function (s) {
-            _.each(that.sortingDirection, function (o) {
-                that.urlsToCrawl.push(util.format('page=%ss=%so=%', page, s, o));
-                console.log(util.format('page=%s&s=%s&o=%s', page, s, o))
-            })
-        })
-    })
+    //for (var i = 1; i <= 125; i++) {
+    //    that.pageIndex.push(i);
+    //}
+    //this.sorting = {
+    //    title: 0,
+    //    artist: 1,
+    //    creator: 2,
+    //    //difficulty:3
+    //    ranked: 4
+    //}
+    //this.sortingDirection = {
+    //    asc: 0,
+    //    desc: 1
+    //}
+    //_.each(that.pageIndex, function (page) {
+    //    _.each(that.sorting, function (s) {
+    //        _.each(that.sortingDirection, function (o) {
+    //            that.urlsToCrawl.push(util.format('page=%ss=%so=%', page, s, o));
+    //            console.log(util.format('page=%s&s=%s&o=%s', page, s, o))
+    //        })
+    //    })
+    //})
 
 
     this.requestPage = function (query) {
@@ -82,13 +82,13 @@ function OsuStats() {
                             if ($(smallDetails[i]).hasClass('icon-heart') && (i + 1) < smallDetails.length) {
                                 var favoriteStr = S($(smallDetails[i + 1]).text());
                                 favoriteStr.replaceAll(',', '');
-                                update.favouritedCount = parseInt(favoriteStr.toStrintg(), 10);
+                                update.favouritedCount = parseInt(favoriteStr.toString(), 10);
 
                             }
                             if ($(smallDetails[i]).hasClass('icon-play') && (i + 1) < smallDetails.length) {
                                 var playCountStr = S($(smallDetails[i + 1]).text());
                                 playCountStr = playCountStr.replaceAll(',', '');
-                                update.playCount = parseInt(playCountStr.toStrintg(), 10);
+                                update.playCount = parseInt(playCountStr.toString(), 10);
                             }
                         }
 

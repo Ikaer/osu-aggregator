@@ -81,7 +81,7 @@ nconf.file({file: 'config.json'});
 mongoose.connect(nconf.get('mongodbPath'), function (err) {
     if (err) throw err;
     osuStats.start();
-    //importAPI.start();
+    importAPI.start();
 });
 
 
