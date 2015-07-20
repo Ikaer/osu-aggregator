@@ -120,7 +120,7 @@ try {
                 return cd.id !== traceOfDef.id;
             });
         })
-        //console.log('%s'.bgBlue.white, nextCall.options.hostname + nextCall.options.path)
+        console.log('%s'.bgBlue.white, nextCall.options.hostname + nextCall.options.path)
         try {
             http.get(nextCall.options, function (res) {
                 res.on('error', function (e) {
@@ -339,21 +339,21 @@ try {
                 buffer.write(chunk)
             })
             res.on('end', function () {
-                console.log('read conmplete')
+              //  console.log('read conmplete')
                 releaseHttp.resolve();
             })
             res.on('error', function () {
-                console.log('read conmplete')
+               // console.log('read conmplete')
                 releaseHttp.resolve();
             })
             res.on('close', function () {
-                console.log('read conmplete')
+               // console.log('read conmplete')
                 releaseHttp.resolve();
             })
 
         }
         this.callbackToCheckSizeError = function (error) {
-            console.error(error);
+            //console.error(error);
         }
 
         if (this.toDownload === false) {
@@ -495,7 +495,9 @@ try {
             databaseVerifications.push(dBeatmap.promise);
             Beatmap.findOne({'beatmap_id': jsonBeatmap.beatmap_id}, function (err, databaseBeatmap) {
                 var toUpdate = (null === databaseBeatmap
-                || moment(databaseBeatmap.last_update).isAfter(moment(jsonBeatmap.last_update)));
+                || moment(databaseBeatmap.last_update).isBefore(moment(jsonBeatmap.last_update))
+                || moment(databaseBeatmap.approved_date).isBefore(moment(jsonBeatmap.approved_date))
+                || databaseBeatmap.approved !== jsonBeatmap.approved);
                 dBeatmap.resolve(toUpdate);
             });
         });
@@ -521,7 +523,7 @@ try {
                 var filesAreOk = !(_.where(that.files, {toDownload: true}).length > 0);
                 that.toUpdate = (false === databaseIsOk || false === filesAreOk || false === directoryIsOk);
                 if (that.toUpdate === true) {
-                   // console.log('[%s] toUpdate: %s, files ok: %s, directory ok: %s, database ok: %s'.red, that.id, that.toUpdate, filesAreOk, directoryIsOk, databaseIsOk)
+                    console.log('[%s] toUpdate: %s, files ok: %s, directory ok: %s, database ok: %s'.red, that.id, that.toUpdate, filesAreOk, directoryIsOk, databaseIsOk)
                 }
                 d.resolve(true);
             }).fail(function () {

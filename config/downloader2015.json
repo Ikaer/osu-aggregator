@@ -1,6 +1,6 @@
 {
   "apiKey":"d5d11123e677e4fde474e0887f5ce80710d423a3",
-  "stuffPath":"C:/osu library/",
+  "stuffPath":"G:/osu library/",
   "mongodbPath" : "mongodb://127.0.0.1:27017/OSU",
   "timeoutToTransferFiles" : 2000,
   "maxTransfer" : 2,
