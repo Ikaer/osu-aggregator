@@ -36,6 +36,7 @@ try {
         that.basePath = nconf.get('stuffPath');
 
         that.basePathTemp = that.basePath +  nconf.get('tempFolder');
+        console.log(that.basePathTemp);
         try {
             fs.mkdirSync(that.basePathTemp);
         }
@@ -223,7 +224,7 @@ try {
         this.host = fileManager.fileTypes[type].host;
         this.path = fileManager.fileTypes[type].path(id);
         this.filePath = fileManager.basePath + id + '/' + id + fileManager.fileTypes[type].suffix;
-        this.tempFilePath = fileManager.basePath + 'temp/' + id + fileManager.fileTypes[type].suffix;
+        this.tempFilePath = fileManager.basePath + nconf.get('tempFolder') + '/' + id + fileManager.fileTypes[type].suffix;
         try {
             fs.statSync(this.tempFilePath);
             fs.unlinkSync(this.tempFilePath);
@@ -443,8 +444,15 @@ try {
         _.each(that.beatmaps, function (beatmap) {
             var beatmapPromise = Q.defer();
             dArray.push(beatmapPromise.promise);
-            Beatmap.findOneAndUpdate({'beatmap_id': beatmap.beatmap_id}, beatmap, {upsert: true}, function () {
-              //  console.log('beatmapset %s / map %s updated in database'.bgMagenta.white, that.beatmapSet.beatmapset_id, beatmap.beatmap_id)
+            var simpleB = beatmap.toJSON();
+            delete simpleB._id;
+            Beatmap.findOneAndUpdate({'beatmap_id': beatmap.beatmap_id}, simpleB, {upsert: true}, function (err,doc) {
+                if(err){
+                    console.log(err);
+                }
+                else{
+                console.log('beatmapset %s / map %s updated in database'.bgMagenta.white, beatmap.beatmapset_id, beatmap.beatmap_id)
+                }
                 beatmapPromise.resolve(true);
             });
         })
