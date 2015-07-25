@@ -1,6 +1,4 @@
 {
-  "apiKey": "d5d11123e677e4fde474e0887f5ce80710d423a3",
-  "mongodbPath": "mongodb://127.0.0.1:27017/OSU",
   "updateStatsTimeout": 500,
   "useCrawlDate": false,
   "startCrawlingServer": true,
