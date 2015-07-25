@@ -34,9 +34,7 @@ function SiteQueue(siteName) {
         if (that.queue.length > 0) {
             var job = that.queue[0];
             job();
-
             that.queue.shift();
-
         }
     }, 1000)
 }
