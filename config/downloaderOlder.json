@@ -3,7 +3,7 @@
   "maxTransfer" : 1,
   "forceRedownload" : false,
   "dateInf": "2007-01-01",
-  "dateSup": "2014-01-01",
+  "dateSup": "2014-12-01",
   "revert":true,
   "timeoutForOsuAPI": 10000,
   "activeFileSizeCheck": false,

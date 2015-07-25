@@ -96,10 +96,11 @@ WebsiteBeatmapCrawler.prototype.parsePage = function (url) {
 
                     var dOfBeatmaps = [];
                     for (var i = 0; i < beatmapDivs.length; i++) {
-                        (function (bd) {
+                        (function (bd, i) {
                             var dOfBeatmap = Q.defer();
                             dOfBeatmaps.push(dOfBeatmap.promise);
                             that.queue.addJob(function () {
+                                console.log('crawling api ' + i)
                                 var beatmapSetId = $(bd).attr('id');
                                 var beatmapSetsApiUrl = util.format('https://osu.ppy.sh/api/get_beatmaps?s=%s&k=%s', beatmapSetId, that.apiKey)
                                 request(beatmapSetsApiUrl, function (error, response, body) {
@@ -117,7 +118,7 @@ WebsiteBeatmapCrawler.prototype.parsePage = function (url) {
                                     }
                                 });
                             })
-                        }(beatmapDivs[i]))
+                        }(beatmapDivs[i], i))
                     }
 
                     Q.all(dOfBeatmaps).then(function () {
