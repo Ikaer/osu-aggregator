@@ -30,14 +30,29 @@ function SiteQueue(siteName) {
     var that = this;
     this.name = siteName;
     this.queue = [];
+    this.current = 0;
     setInterval(function () {
-        if (that.queue.length > 0) {
+        if (that.queue.length > 0 && that.current == 0) {
             var job = that.queue[0];
-            job();
+            that.doJob(job);
             that.queue.shift();
         }
-    }, 1000)
+    }, 2000)
 }
+SiteQueue.prototype.doJob = function(job){
+    var that = this;
+    that.current++;
+    var d = Q.defer();
+    job(d);
+    Q.when(d.promise).timeout(30000, 'timeout').then(function(){
+
+    }, function(err){
+        console.log('Timeout!')
+    }).finally(function(){
+        that.current--;
+    });
+}
+
 SiteQueue.prototype.addJob = function (fnOfJob) {
     var that = this;
     var d = Q.defer();
@@ -99,21 +114,24 @@ WebsiteBeatmapCrawler.prototype.parsePage = function (url) {
                         (function (bd, i) {
                             var dOfBeatmap = Q.defer();
                             dOfBeatmaps.push(dOfBeatmap.promise);
-                            that.queue.addJob(function () {
+                            that.queue.addJob(function (d) {
                                 console.log('crawling api ' + i)
                                 var beatmapSetId = $(bd).attr('id');
                                 var beatmapSetsApiUrl = util.format('https://osu.ppy.sh/api/get_beatmaps?s=%s&k=%s', beatmapSetId, that.apiKey)
                                 request(beatmapSetsApiUrl, function (error, response, body) {
                                     if (error) {
                                         console.error(error);
+                                        d.resolve();
                                     } else {
                                         try {
                                             var beatmaps = JSON.parse(body);
                                             beatmapsFromAPI = beatmapsFromAPI.concat(beatmaps);
                                             dOfBeatmap.resolve();
+                                            d.resolve();
                                         }
                                         catch (e) {
                                             console.error(e);
+                                            d.resolve();
                                         }
                                     }
                                 });
