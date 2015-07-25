@@ -28,8 +28,7 @@ module.exports = function() {
             "total_length"     : Number,                 // seconds from first note to last note including breaks
             "version"          : String,            // difficulty name
             "mode": Number,
-            "xFileName": String,
-            "xLastCrawl": Date,
+
             // from website
             "playCount": Number,
             "playSuccess": Number,
@@ -39,7 +38,15 @@ module.exports = function() {
             "negativeUserRating":Number,
             "positiveUserRating":Number,
             "tags":[String],
-            "submitted_date":Date
+            "submitted_date":Date,
+
+            // create by my system
+            "xFileName": String,
+            "xLastCrawl": Date,
+            "xHasMP3":Boolean,
+            "xHasLargeImage":Boolean,
+            "xHasImage":Boolean,
+            "xHasOsz":Boolean
         });
     mongoose.model('Beatmap', BeatmapSchema);
 };

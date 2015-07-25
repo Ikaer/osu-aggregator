@@ -21,7 +21,7 @@ var util = require('util')
 
 var colors = require('colors')
 
-function Downloader() {
+function ApiBeatmapCrawler() {
     var that = this;
 
     that.osuAPIUrl = 'https://osu.ppy.sh';
@@ -57,7 +57,7 @@ function Downloader() {
 }
 
 
-Downloader.prototype.getBeatmaps = function(since) {
+ApiBeatmapCrawler.prototype.getBeatmaps = function(since) {
     var that = this;
     var d = Q.defer();
     var promise = d.promise;
@@ -74,7 +74,7 @@ Downloader.prototype.getBeatmaps = function(since) {
     return promise;
 }
 
-Downloader.prototype.nextDate = function () {
+ApiBeatmapCrawler.prototype.nextDate = function () {
     var that = this;
     if(that.currentIndex < that.dates.length - 1){
         that.currentIndex++;
@@ -89,7 +89,7 @@ Downloader.prototype.nextDate = function () {
         that.currentIndex = 0;
     }
 }
-Downloader.prototype.getAndWriteBeatmaps = function () {
+ApiBeatmapCrawler.prototype.getAndWriteBeatmaps = function () {
     var that = this;
     Q.when(that.getBeatmaps(that.dates[that.currentIndex])).then(function (sr) {
         var srJSON = JSON.parse(sr);
@@ -108,7 +108,7 @@ Downloader.prototype.getAndWriteBeatmaps = function () {
 module.exports = {
     config: null,
     start: function () {
-        var downloader = new Downloader();
-        downloader.getAndWriteBeatmaps();
+        var crawler = new ApiBeatmapCrawler();
+        crawler.getAndWriteBeatmaps();
     }
 }

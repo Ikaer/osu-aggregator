@@ -12,5 +12,6 @@
   "useCrawlDate": false,
   "startCrawlingServer": false,
   "startFileUpdater":true,
-  "crawler_startingId": 50000
+  "crawler_startingId": 50000,
+  "port":5489
 }

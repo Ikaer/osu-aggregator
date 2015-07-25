@@ -8,5 +8,6 @@
   "timeoutForOsuAPI": 10000,
   "activeFileSizeCheck": false,
   "startFileUpdater":true,
-  "tempFolder":"temp2015"
+  "tempFolder":"temp2015",
+  "port":5491
 }

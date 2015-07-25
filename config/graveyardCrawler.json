@@ -1,13 +1,14 @@
 {
   "timeoutToTransferFiles" : 2000,
-  "maxTransfer" : 1,
+  "maxTransfer" : 2,
   "forceRedownload" : false,
-  "dateInf": "2007-01-01",
-  "dateSup": "2014-01-01",
+  "dateInf": "2015-01-01",
+  "dateSup": null,
   "revert":true,
   "timeoutForOsuAPI": 10000,
   "activeFileSizeCheck": false,
   "startFileUpdater":true,
-  "tempFolder":"tempOlder",
-  "port":5492
+  "source":"graveyard",
+  "tempFolder":"graveyard",
+  "port":5493
 }

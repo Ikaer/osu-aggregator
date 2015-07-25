@@ -16,26 +16,30 @@ try {
 
     var nconf = require('nconf');
     nconf.argv();
-    var configFilePath =nconf.get('config')
+    var configFilePath = nconf.get('config')
 
-    if(undefined === configFilePath || null === configFilePath || '' === configFilePath){
+    if (undefined === configFilePath || null === configFilePath || '' === configFilePath) {
         configFilePath = 'config/config.json';
     }
 
-    nconf.file(configFilePath);
 
+    nconf.file(configFilePath);
+    var request = require('request');
+    var tough = require('tough-cookie');
+    var Cookie = tough.Cookie;
 
     var http = require('http-debug').http;
 
     function FileManager() {
         var that = this;
-
+        that.login = nconf.get('login');
+        that.password = nconf.get('password');
         that.timeoutToTransferFiles = nconf.get('timeoutToTransferFiles');
         that.maxTransfer = nconf.get('maxTransfer');
         that.forceRedownload = nconf.get('forceRedownload');
         that.basePath = nconf.get('stuffPath');
 
-        that.basePathTemp = that.basePath +  nconf.get('tempFolder');
+        that.basePathTemp = that.basePath + nconf.get('tempFolder');
         console.log(that.basePathTemp);
         try {
             fs.mkdirSync(that.basePathTemp);
@@ -67,12 +71,20 @@ try {
 
 
         this.fileTypes = {
+            //osz: {
+            //    host: 'bloodcat.com',
+            //    suffix: '.osz',
+            //    path: function (id) {
+            //        return '/osu/s/' + id;
+            //    }
+            //},
             osz: {
-                host: 'bloodcat.com',
+                host: 'osu.ppy.sh',
                 suffix: '.osz',
                 path: function (id) {
-                    return '/osu/s/' + id;
-                }
+                    return '/d/' + id;
+                },
+                isOszFile: true
             },
             largeImage: {
                 host: 'b.ppy.sh',
@@ -123,19 +135,48 @@ try {
         })
         console.log('%s'.bgBlue.white, nextCall.options.hostname + nextCall.options.path)
         try {
-            http.get(nextCall.options, function (res) {
-                res.on('error', function (e) {
-                    nextCall.callbackError(e, d);
+            if (nextCall.options.url) {
+                request.post(
+                    'https://osu.ppy.sh/forum/ucp.php?mode=login',
+                    {form: {redirect: '/', sid: '', username: that.login, password: that.password, login: 'login'}},
+                    function (error, response, body) {
+                        if (!error && (response.statusCode == 200 || response.statusCode === 302)) {
+                            var j = request.jar();
+                             _.each(response.headers['set-cookie'], function (c) {
+                                var parsedCookie = Cookie.parse(c);
+                                j.setCookie(util.format("%s=%s", parsedCookie.key, parsedCookie.value), 'https://osu.ppy.sh');
+                            });
+                            request({url: nextCall.options.url, jar: j})
+                                .on('response', function(res) {
+                                    res.on('error', function (e) {
+                                        nextCall.callbackError(e, d);
+                                    });
+                                    if (res.statusCode === 200) {
+                                        nextCall.callback(res, d);
+                                    }
+                                    else {
+                                        nextCall.callbackError(res.statusCode, d);
+                                    }
+                                })
+                        }
+                    }
+                );
+            }
+            else {
+                http.get(nextCall.options, function (res) {
+                    res.on('error', function (e) {
+                        nextCall.callbackError(e, d);
+                    });
+                    if (res.statusCode === 200) {
+                        nextCall.callback(res, d);
+                    }
+                    else {
+                        nextCall.callbackError(res.statusCode, d);
+                    }
+                }, function (err) {
+                    nextCall.callbackError(err, d);
                 });
-                if (res.statusCode === 200) {
-                    nextCall.callback(res, d);
-                }
-                else {
-                    nextCall.callbackError(res.statusCode, d);
-                }
-            }, function (err) {
-                nextCall.callbackError(err, d);
-            });
+            }
         }
         catch (e) {
             nextCall.callbackError(e, d);
@@ -224,7 +265,7 @@ try {
         this.host = fileManager.fileTypes[type].host;
         this.path = fileManager.fileTypes[type].path(id);
         this.filePath = fileManager.basePath + id + '/' + id + fileManager.fileTypes[type].suffix;
-        this.tempFilePath = fileManager.basePath + nconf.get('tempFolder') + '/' + id + fileManager.fileTypes[type].suffix;
+        this.tempFilePath = fileManager.basePath + 'temp/' + id + fileManager.fileTypes[type].suffix;
         try {
             fs.statSync(this.tempFilePath);
             fs.unlinkSync(this.tempFilePath);
@@ -245,6 +286,9 @@ try {
                 "Connection": "keep-alive",
                 "Host": this.host
             }
+        }
+        if(type === 'osz'){
+            this.httpOptions.url = 'https://osu.ppy.sh/d/' + id;
         }
 
         this.toDownload = nconf.get('forceRedownload');
@@ -268,7 +312,7 @@ try {
         this.downloadReason = '';
         this.callbackToWrite = function (res, releaseHttp) {
             try {
-              //  console.log('%s is going to be be written'.bgCyan.white, that.filePath);
+                //  console.log('%s is going to be be written'.bgCyan.white, that.filePath);
                 try {
                     var fileWriter = fs.createWriteStream(that.tempFilePath);
                 }
@@ -308,7 +352,7 @@ try {
                                 readOfTemp.on('end', function () {
                                     fs.unlink(that.tempFilePath);
                                 });
-                               // console.log('%s has been written'.bgCyan.white, that.filePath)
+                                // console.log('%s has been written'.bgCyan.white, that.filePath)
                             }
                         }, 2000);
                     }
@@ -340,15 +384,15 @@ try {
                 buffer.write(chunk)
             })
             res.on('end', function () {
-              //  console.log('read conmplete')
+                //  console.log('read conmplete')
                 releaseHttp.resolve();
             })
             res.on('error', function () {
-               // console.log('read conmplete')
+                // console.log('read conmplete')
                 releaseHttp.resolve();
             })
             res.on('close', function () {
-               // console.log('read conmplete')
+                // console.log('read conmplete')
                 releaseHttp.resolve();
             })
 
@@ -391,7 +435,7 @@ try {
         }
         Q.when(this.isChecked).then(function () {
             if (that.toDownload === true) {
-               // console.log('File %s ', that.filePath, that.downloadReason);
+                // console.log('File %s ', that.filePath, that.downloadReason);
             }
         })
     }
@@ -446,12 +490,12 @@ try {
             dArray.push(beatmapPromise.promise);
             var simpleB = beatmap.toJSON();
             delete simpleB._id;
-            Beatmap.findOneAndUpdate({'beatmap_id': beatmap.beatmap_id}, simpleB, {upsert: true}, function (err,doc) {
-                if(err){
+            Beatmap.findOneAndUpdate({'beatmap_id': beatmap.beatmap_id}, simpleB, {upsert: true}, function (err, doc) {
+                if (err) {
                     console.log(err);
                 }
-                else{
-                console.log('beatmapset %s / map %s updated in database'.bgMagenta.white, beatmap.beatmapset_id, beatmap.beatmap_id)
+                else {
+                    console.log('beatmapset %s / map %s updated in database'.bgMagenta.white, beatmap.beatmapset_id, beatmap.beatmap_id)
                 }
                 beatmapPromise.resolve(true);
             });

@@ -8,6 +8,7 @@
   "timeoutForOsuAPI": 10000,
   "activeFileSizeCheck": false,
   "startFileUpdater":true,
-  "source":"help",
-  "tempFolder":"help"
+  "source":"help_pending",
+  "tempFolder":"help_pending",
+  "port":5494
 }
