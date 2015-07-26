@@ -37,7 +37,7 @@ function SiteQueue(siteName) {
             that.doJob(job);
             that.queue.shift();
         }
-    }, 2000)
+    }, 1000)
 }
 SiteQueue.prototype.doJob = function(job){
     var that = this;
@@ -83,15 +83,46 @@ function WebsiteBeatmapCrawler(source) {
     that.currentIndex = 0;
     that.queue = new SiteQueue('osu-api');
 }
-
+WebsiteBeatmapCrawler.prototype.getBeatmapIdsOfPage = function(url){
+    var pageParsed = Q.defer();
+    var resolvePromise = function(){
+        pageParsed.resolve()
+    }
+    console.log(url.bgBlue.white)
+    https.get(url, function (res) {
+        res.on('error', function (e) {
+            console.error(e);
+        })
+        res.setEncoding('utf8');
+        var body = '';
+        res.on('data', function (chunk) {
+            body += chunk;
+        });
+        res.on('close', function (e) {
+            console.log('connection closed.');
+        })
+        res.on('end', function () {
+            try {
+                var $ = cheerio.load(body);
+                var beatmapDivs = $('.beatmapListing').children('.beatmap');
+                if (beatmapDivs.length > 0) {
+                    var dOfBeatmaps = [];
+                    for (var i = 0; i < beatmapDivs.length; i++) {
+                    }
+                }
+            }
+            catch (e) {
+            }
+        })
+    })
+    return pageParsed.promise();
+}
 
 WebsiteBeatmapCrawler.prototype.parsePage = function (url) {
     var that = this;
-    var d = Q.defer();
-    var promise = d.promise;
+    var finalDeferred = Q.defer();
     console.log(url.bgBlue.white)
     https.get(url, function (res) {
-        var beatmapsFromAPI = [];
         res.on('error', function (e) {
             console.error(e);
         })
@@ -122,16 +153,18 @@ WebsiteBeatmapCrawler.prototype.parsePage = function (url) {
                                     if (error) {
                                         console.error(error);
                                         d.resolve();
+                                        dOfBeatmap.resolve();
                                     } else {
                                         try {
                                             var beatmaps = JSON.parse(body);
-                                            beatmapsFromAPI = beatmapsFromAPI.concat(beatmaps);
+                                            finalDeferred.notify(beatmaps);
                                             dOfBeatmap.resolve();
                                             d.resolve();
                                         }
                                         catch (e) {
                                             console.error(e);
                                             d.resolve();
+                                            dOfBeatmap.resolve();
                                         }
                                     }
                                 });
@@ -139,8 +172,8 @@ WebsiteBeatmapCrawler.prototype.parsePage = function (url) {
                         }(beatmapDivs[i], i))
                     }
 
-                    Q.all(dOfBeatmaps).then(function () {
-                        d.resolve(beatmapsFromAPI);
+                    Q.all(dOfBeatmaps).finally(function () {
+                        finalDeferred.resolve();
                     })
                 }
             }
@@ -149,7 +182,7 @@ WebsiteBeatmapCrawler.prototype.parsePage = function (url) {
             }
         });
     });
-    return promise;
+    return finalDeferred.promise;
 }
 
 WebsiteBeatmapCrawler.prototype.nextUrl = function () {
@@ -166,15 +199,16 @@ WebsiteBeatmapCrawler.prototype.nextUrl = function () {
 WebsiteBeatmapCrawler.prototype.getAndWriteBeatmaps = function () {
     var that = this;
     Q.when(that.parsePage(that.urls[that.currentIndex])).then(function (beatmapsFromAPI) {
-        var hasDoneWriting = fileManager.writeBeatmaps(beatmapsFromAPI);
-        Q.when(hasDoneWriting).then(function () {
-            console.log('this batch is done'.green.bold)
-            console.log('==============================================================================='.green.bold)
-            that.nextUrl();
-            setTimeout(function () {
-                that.getAndWriteBeatmaps();
-            }, nconf.get('timeoutForOsuAPI'));
-        });
+
+    }, function(err){
+
+    }, function(beatmapsFromAPI){
+        fileManager.writeBeatmaps(beatmapsFromAPI);
+    }).finally(function(){
+        that.nextUrl();
+        setTimeout(function () {
+            that.getAndWriteBeatmaps();
+        }, nconf.get('timeoutForOsuAPI'));
     });
 };
 
