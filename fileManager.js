@@ -490,9 +490,9 @@ try {
             dArray.push(beatmapPromise.promise);
             var simpleB = beatmap.toJSON();
             simpleB.mp3_403 = that.files.mp3.get403 ? new Date() : null;
-            simpleB.image_403 = that.files.mp3.get403 ? new Date() : null;
-            simpleB.largeImage_403 = that.files.mp3.get403 ? new Date() : null;
-            simpleB.osz_403 = that.files.mp3.get403 ? new Date() : null;
+            simpleB.image_403 = that.files.image.get403 ? new Date() : null;
+            simpleB.largeImage_403 = that.files.largeImage.get403 ? new Date() : null;
+            simpleB.osz_403 = that.files.osz.get403 ? new Date() : null;
             delete simpleB._id;
             Beatmap.findOneAndUpdate({'beatmap_id': beatmap.beatmap_id}, simpleB, {upsert: true}, function (err, doc) {
                 if (err) {
