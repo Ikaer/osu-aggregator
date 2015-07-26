@@ -48,6 +48,8 @@ function Crawler() {
                 try {
                     var $ = cheerio.load(body);
 
+
+
                     var update = {
                         "xLastCrawl": new Date(),
                         "playCount": 0,

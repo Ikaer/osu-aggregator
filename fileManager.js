@@ -142,12 +142,12 @@ try {
                     function (error, response, body) {
                         if (!error && (response.statusCode == 200 || response.statusCode === 302)) {
                             var j = request.jar();
-                             _.each(response.headers['set-cookie'], function (c) {
+                            _.each(response.headers['set-cookie'], function (c) {
                                 var parsedCookie = Cookie.parse(c);
                                 j.setCookie(util.format("%s=%s", parsedCookie.key, parsedCookie.value), 'https://osu.ppy.sh');
                             });
                             request({url: nextCall.options.url, jar: j})
-                                .on('response', function(res) {
+                                .on('response', function (res) {
                                     res.on('error', function (e) {
                                         nextCall.callbackError(e, d);
                                     });
@@ -183,8 +183,6 @@ try {
         }
         return d.promise;
     }
-
-
     FileManager.prototype.doNextCall = function () {
         var that = this;
         try {
@@ -287,10 +285,10 @@ try {
                 "Host": this.host
             }
         }
-        if(type === 'osz'){
+        if (type === 'osz') {
             this.httpOptions.url = 'https://osu.ppy.sh/d/' + id;
         }
-
+        this.get403 = false;
         this.toDownload = nconf.get('forceRedownload');
         this.hasBeenSuccessfullyDownloaded = false;
         this.downloadedMessage = '';
@@ -369,6 +367,7 @@ try {
             }
         }
         this.callbackToWriteError = function (error, releaseHttp) {
+            that.get403 = (error === 403);
             that.resolveIsDownloaded(releaseHttp, false, util.format('Something went wrong with request for file %s: %s', that.filePath, error));
         }
         this.callbackToCheckSize = function (res, releaseHttp) {
@@ -486,9 +485,14 @@ try {
         var that = this;
         var dArray = [];
         _.each(that.beatmaps, function (beatmap) {
+
             var beatmapPromise = Q.defer();
             dArray.push(beatmapPromise.promise);
             var simpleB = beatmap.toJSON();
+            simpleB.mp3_403 = that.files.mp3.get403 ? new Date() : null;
+            simpleB.image_403 = that.files.mp3.get403 ? new Date() : null;
+            simpleB.largeImage_403 = that.files.mp3.get403 ? new Date() : null;
+            simpleB.osz_403 = that.files.mp3.get403 ? new Date() : null;
             delete simpleB._id;
             Beatmap.findOneAndUpdate({'beatmap_id': beatmap.beatmap_id}, simpleB, {upsert: true}, function (err, doc) {
                 if (err) {
@@ -516,24 +520,18 @@ try {
         });
         Q.allSettled(_.map(filesToDownload, function (f) {
             return f.isDownloaded;
-        })).then(function () {
-            d.resolve(true);
-        }).fail(function () {
-            d.resolve(false);
-        });
+        })).finally(function () {
+            d.resolve();
+        })
         return d.promise;
     }
     OsuThing.prototype.update = function (isUpdated) {
         var that = this;
 
-        Q.when(that.queueDownload()).then(function () {
-            Q.when(that.upsertInDatabase()).then(function () {
-                isUpdated.resolve(true);
-            }).fail(function () {
-                isUpdated.resolve(false);
+        Q.when(that.queueDownload()).finally(function () {
+            Q.when(that.upsertInDatabase()).finally(function () {
+                isUpdated.resolve();
             })
-        }).fail(function () {
-            isUpdated.resolve(false);
         });
     }
     OsuThing.prototype.mustBeUpdated = function () {
@@ -541,7 +539,7 @@ try {
         // console.log('[%s] check if its must be updated'.red, this.id)
         var d = Q.defer()
         var databaseVerifications = [];
-
+        var foundFirstBeatmap = null;
         _.each(that.beatmaps, function (jsonBeatmap) {
             var dBeatmap = Q.defer();
             databaseVerifications.push(dBeatmap.promise);
@@ -550,16 +548,16 @@ try {
                 || moment(databaseBeatmap.last_update).isBefore(moment(jsonBeatmap.last_update))
                 || moment(databaseBeatmap.approved_date).isBefore(moment(jsonBeatmap.approved_date))
                 || databaseBeatmap.approved !== jsonBeatmap.approved);
+
+                if (databaseBeatmap !== null) {
+                    that.files.mp3.get403 = (databaseBeatmap.mp3_403 !== undefined && databaseBeatmap.mp3_403 !== null);
+                    that.files.image.get403 = (databaseBeatmap.image_403 !== undefined && databaseBeatmap.image_403 !== null);
+                    that.files.largeImage.get403 = (databaseBeatmap.largeImage_403 !== undefined && databaseBeatmap.largeImage_403 !== null);
+                    that.files.osz.get403 = (databaseBeatmap.mp3_403 !== undefined && databaseBeatmap.mp3_403 !== null);
+                }
+
                 dBeatmap.resolve(toUpdate);
             });
-        });
-
-        // checks for beatmapset
-        var dBeatmapSet = Q.defer();
-        databaseVerifications.push(dBeatmapSet.promise);
-        Beatmap.findOne({beatmapset_id: that.beatmaps[0].beatmapset_id}, function (err, databaseBeatmapSet) {
-            var toUpdate = (null === databaseBeatmapSet || (moment(databaseBeatmapSet.last_update).isAfter(moment(that.beatmaps[0].last_update))));
-            dBeatmapSet.resolve(toUpdate);
         });
 
         var directoryIsOk = that.files.tryMakeDirSync(that.id);
@@ -568,11 +566,15 @@ try {
         fileVerifications.push(that.files.largeImage.isChecked)
         fileVerifications.push(that.files.image.isChecked)
         fileVerifications.push(that.files.osz.isChecked)
-
         Q.allSettled(databaseVerifications).then(function (values) {
             var databaseIsOk = !(_.where(values, {value: true}).length > 0);
             Q.allSettled(fileVerifications).then(function () {
-                var filesAreOk = !(_.where(that.files, {toDownload: true}).length > 0);
+                var filesToDownload = _.filter(that.files.list, function (f) {
+                    return f.toDownload === true && f.get403 === false;
+                })
+                var filesAreOk = filesToDownload.length === 0;
+
+
                 that.toUpdate = (false === databaseIsOk || false === filesAreOk || false === directoryIsOk);
                 if (that.toUpdate === true) {
                     console.log('[%s] toUpdate: %s, files ok: %s, directory ok: %s, database ok: %s'.red, that.id, that.toUpdate, filesAreOk, directoryIsOk, databaseIsOk)
@@ -598,10 +600,10 @@ try {
                 that.update(d);
             }
             else {
-                d.resolve(false);
+                d.resolve();
             }
         }).fail(function () {
-            d.resolve(false);
+            d.resolve();
         });
         return d.promise;
     }
@@ -617,6 +619,7 @@ try {
         else {
             var allMaintenanceIsDone = [];
             var maintenanceDoneCount = 0;
+            var lastPercentage = 0;
             var treatedBeatmapSetId = []
             console.log('0% done'.bgGreen.bold.white);
             _.each(json, function (x) {
@@ -626,23 +629,18 @@ try {
                     treatedBeatmapSetId.push(x.beatmapset_id);
                     var osuThing = new OsuThing(x, _.where(json, {'beatmapset_id': x.beatmapset_id}))
                     var maintenanceDone = osuThing.doMaintance()
-                    Q.when(maintenanceDone).then(function (value) {
+                    Q.when(maintenanceDone).finally(function () {
                         maintenanceDoneCount++;
-                        if (value !== false || maintenanceDoneCount === treatedBeatmapSetId.length) {
-                            var percentage = parseInt(maintenanceDoneCount * 100 / treatedBeatmapSetId.length, 10);
+                        var percentage = parseInt(maintenanceDoneCount * 100 / treatedBeatmapSetId.length, 10);
+                        if (percentage === 100 || percentage - lastPercentage >= 10) {
+                            lastPercentage = percentage;
                             console.log('%s% done'.bgGreen.bold.white, percentage);
                         }
-                    }).fail(function (value) {
-                        maintenanceDoneCount++;
-                        if (value !== false || maintenanceDoneCount === treatedBeatmapSetId.length) {
-                            var percentage = parseInt(maintenanceDoneCount * 100 / treatedBeatmapSetId.length, 10);
-                            console.log('%s% done'.bgGreen.bold.white, percentage);
-                        }
-                    })
+                    });
                     allMaintenanceIsDone.push(maintenanceDone);
                 }
             });
-            Q.allSettled(allMaintenanceIsDone).then(function () {
+            Q.allSettled(allMaintenanceIsDone).finally(function () {
                 _allIsDone.resolve(true);
             });
         }

@@ -43,10 +43,10 @@ module.exports = function() {
             // create by my system
             "xFileName": String,
             "xLastCrawl": Date,
-            "xHasMP3":Boolean,
-            "xHasLargeImage":Boolean,
-            "xHasImage":Boolean,
-            "xHasOsz":Boolean
+            "mp3_403":Date,
+            "largeImage_403":Date,
+            "image_403":Date,
+            "osz_403":Date
         });
     mongoose.model('Beatmap', BeatmapSchema);
 };
