@@ -1,8 +1,0 @@
-{
-  "updateStatsTimeout": 500,
-  "useCrawlDate": false,
-  "startCrawlingServer": true,
-  "startFileUpdater": false,
-  "crawler_startingId": 50000,
-  "port":5490
-}

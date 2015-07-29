@@ -1,17 +1,8 @@
 {
-  "tempFolder":"temp",
-  "timeoutToTransferFiles" : 2000,
-  "maxTransfer" : 1,
-  "forceRedownload" : false,
-  "dateInf": "2015-06-19",
-  "dateSup": null,
-  "revert":true,
-  "timeoutForOsuAPI": 10000,
-  "activeFileSizeCheck": false,
-  "updateStatsTimeout": 500,
-  "useCrawlDate": false,
-  "startCrawlingServer": false,
-  "startFileUpdater":true,
-  "crawler_startingId": 50000,
-  "port":5489
+  "configs":[
+    "downloader2015",
+    "downloaderOlder",
+    "graveyardCrawler",
+    "pendingCrawler"
+  ]
 }
