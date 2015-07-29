@@ -20,6 +20,7 @@
     "http-debug": "^0.1.2",
     "jade": "~1.9.2",
     "jquery": "^2.1.4",
+    "jszip": "^2.5.0",
     "less-middleware": "1.0.x",
     "moment": "^2.10.3",
     "mongoose": "~3.8.0",
@@ -30,7 +31,7 @@
     "request": "^2.58.0",
     "serve-favicon": "~2.2.1",
     "string": "^3.3.0",
-    "underscore": "^1.8.3",
-    "tough-cookie": "^2.0.0"
+    "tough-cookie": "^2.0.0",
+    "underscore": "^1.8.3"
   }
 }

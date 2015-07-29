@@ -3,6 +3,7 @@
 //"2014-10-15",
 //"2014-09-15",
 try {
+    var jszip = require('jszip')
     var mongoose = require('mongoose');
 
     var Beatmap = mongoose.model("Beatmap");
@@ -260,6 +261,7 @@ try {
     function OsuFile(type, id, lastUpdate) {
         var that = this;
         this.id = id;
+        this.type = type;
         this.host = fileManager.fileTypes[type].host;
         this.path = fileManager.fileTypes[type].path(id);
         this.filePath = fileManager.basePath + id + '/' + id + fileManager.fileTypes[type].suffix;
@@ -332,7 +334,17 @@ try {
                             try {
                                 var statOfTempFile = fs.statSync(that.tempFilePath);
                                 statOfTempFile = statOfTempFile["size"];
-                                if (statOfTempFile === 0) {
+                                var zipIsOk = true;
+                                if (that.type === 'osz') {
+                                    try {
+                                        var data = fs.readFileSync(that.tempFilePath)
+                                        var zip = jszip(data)
+                                    }
+                                    catch (e) {
+                                        zipIsOk = false;
+                                    }
+                                }
+                                if (statOfTempFile === 0 || zipIsOk === false) {
                                     tempFileIsOk = false;
                                     that.resolveIsDownloaded(releaseHttp, false, util.format('After finish writing %s, file size was 0.', that.tempFilePath));
                                     fs.unlink(that.tempFilePath);
