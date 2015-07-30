@@ -2,22 +2,15 @@
  * Created by Xavier on 29/06/2015.
  */
 var Q = require('q');
-var fileManager = require('./fileManager');
 var mongoose = require('mongoose');
 var Beatmap = mongoose.model("Beatmap");
 var moment = require('moment');
-var nconf = require('nconf');
-nconf.argv();
-var configFilePath = nconf.get('config')
 
-if (undefined === configFilePath || null === configFilePath || '' === configFilePath) {
-    configFilePath = 'config/config.json';
-}
 var cheerio = require('cheerio');
 var cheerioAdv = require('cheerio-advanced-selectors')
 
 cheerio = cheerioAdv.wrap(cheerio)
-nconf.file(configFilePath);
+
 
 var request = require('request');
 var util = require('util')
@@ -25,6 +18,7 @@ var util = require('util')
 var colors = require('colors')
 var https = require('https')
 var _ = require('underscore');
+var analyzer = require('./analyzer');
 
 function SiteQueue(siteName) {
     var that = this;
@@ -60,12 +54,13 @@ SiteQueue.prototype.addJob = function (fnOfJob) {
 }
 
 
-function WebsiteBeatmapCrawler(source) {
+function WebsiteBeatmapCrawler(config) {
     var that = this;
-    that.typeOfSource = source;
     that.osuAPIUrl = 'https://osu.ppy.sh'
+    that.analyzer = analyzer.get(config)
+    that.config = config;
     var rParam = 0;
-    switch (source) {
+    switch (config.source) {
         case 'help_pending':
             rParam = 2;
             break;
@@ -79,7 +74,7 @@ function WebsiteBeatmapCrawler(source) {
     for (var i = 1; i <= 125; i++) {
         that.urls.push(util.format('https://osu.ppy.sh/p/beatmaplist?l=1&r=%s&q=&g=0&la=0&s=4&o=1&m=-1&page=%s',rParam, i));
     }
-    that.apiKey = nconf.get('apiKey');
+    that.apiKey = config.apiKey;
     that.currentIndex = 0;
     that.queue = new SiteQueue('osu-api');
 }
@@ -203,20 +198,20 @@ WebsiteBeatmapCrawler.prototype.getAndWriteBeatmaps = function () {
     }, function(err){
 
     }, function(beatmapsFromAPI){
-        fileManager.writeBeatmaps(beatmapsFromAPI);
+        that.analyzer.analyze(beatmapsFromAPI);
     }).finally(function(){
         that.nextUrl();
         setTimeout(function () {
             that.getAndWriteBeatmaps();
-        }, nconf.get('timeoutForOsuAPI'));
+        }, that.config.timeoutForOsuAPI);
     });
 };
-
+WebsiteBeatmapCrawler.prototype.start =function(){
+    this.getAndWriteBeatmaps();
+}
 module.exports = {
-    config: null,
-    start: function (typeOfSource) {
-        console.log(typeOfSource)
-        var websiteBeatmapCrawler = new WebsiteBeatmapCrawler(typeOfSource);
-        websiteBeatmapCrawler.getAndWriteBeatmaps();
+    get: function (config) {
+        return new  WebsiteBeatmapCrawler(config);
+
     }
 }

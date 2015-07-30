@@ -1,3 +1,7 @@
+process.on('uncaughtException', function (e) {
+    console.log(e);
+});
+
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
@@ -62,51 +66,45 @@ if (process.env.NODE_ENV !== 'production') {
 
 }
 
-//require('longjohn');
 module.exports = app;
-
-
-
-
-
-var https = require('https');
-
-
 require("console-stamp")(console)
 
-var nconf = require('nconf');
-nconf.argv();
-var configFilePath =nconf.get('config')
 
-if(undefined === configFilePath || null === configFilePath || '' === configFilePath){
-    configFilePath = 'config/config.json';
-}
+var _ = require('underscore');
 
-nconf.file('config', configFilePath);
-nconf.file('private', 'config/private.json');
+
+var jsonfile = require('jsonfile')
+var privateFile = jsonfile.readFileSync('config/private.json');
 
 var mongoose = require('mongoose');
 require('./schema/beatmap.js')();
-mongoose.connect(nconf.get('mongodbPath'), function (err) {
+require('./schema/user.js')();
+require('./schema/userScore.js')();
+mongoose.connect(privateFile.mongodbPath, function (err) {
     if (err) throw err;
-    if (nconf.get('startCrawlingServer')) {
-        var crawler = require('./crawler');
-        crawler.start();
-    }
-    if (nconf.get('startFileUpdater')) {
-        var source = nconf.get('source');
-        if(undefined === source){
-            source = 'API';
-        }
-        if(source === 'API'){
-            var downloader = require('./apiBeatmapCrawler');
-            downloader.start();
-        }
-        else{
-            var websiteDownloader = require('./WebsiteBeatmapCrawler');
-            websiteDownloader.start(source);
-        }
-    }
+
+    var Crawler = require('./crawlerFactory');
+    var crawler = new Crawler(_.extend(jsonfile.readFileSync('config/crawler.json'), privateFile))
+    crawler.start();
+
+    var websiteCrawler = require('./osuApi/websiteBeatmapCrawler')
+
+    var graveyardCrawler = websiteCrawler.get(_.extend(jsonfile.readFileSync('config/graveyardCrawler.json'), privateFile))
+    graveyardCrawler.start();
+    var pendingCrawler = websiteCrawler.get(_.extend(jsonfile.readFileSync('config/pendingCrawler.json'), privateFile))
+    pendingCrawler.start();
+
+    var apiCrawlerFactory = require('./osuApi/crawler');
+
+    var crawler2015 = apiCrawlerFactory.get(_.extend(jsonfile.readFileSync('config/downloader2015.json'), privateFile));
+    crawler2015.analyze();
+    var crawlerOlder = apiCrawlerFactory.get(_.extend(jsonfile.readFileSync('config/downloaderOlder.json'), privateFile))
+    crawlerOlder.analyze();
 });
 
-app.listen(nconf.get('port'))
+app.listen('4583')
+
+
+//nconf.argv();
+//var configFilePath =nconf.get('config')
+//nconf.file('config', configFilePath);

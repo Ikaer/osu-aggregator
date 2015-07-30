@@ -2,36 +2,29 @@
  * Created by Xavier on 29/06/2015.
  */
 var Q = require('q');
-var fileManager = require('./fileManager');
 var mongoose = require('mongoose');
 var Beatmap = mongoose.model("Beatmap");
 var moment = require('moment');
-var nconf = require('nconf');
-nconf.argv();
-var configFilePath =nconf.get('config')
-
-if(undefined === configFilePath || null === configFilePath || '' === configFilePath){
-    configFilePath = 'config/config.json';
-}
-
-nconf.file(configFilePath);
 
 var request = require('request');
 var util = require('util')
 
 var colors = require('colors')
 
-function ApiBeatmapCrawler() {
-    var that = this;
+var analyzer = require('./analyzer.js');
 
+function OsuApiCrawler(config) {
+    var that = this;
+    that.analyzer = analyzer.get(config);
+    that.config = config;
     that.osuAPIUrl = 'https://osu.ppy.sh';
     that.urls = {
         getBeatmap: '/api/get_beatmaps'
     };
-    that.apiKey = nconf.get('apiKey');
-    that.revert = nconf.get('revert');
-    that.startDate = nconf.get('dateInf') ? moment(nconf.get('dateInf')) : moment('2007-01-01');
-    that.endDate = nconf.get('dateSup') ? moment(nconf.get('dateSup')) : moment();
+    that.apiKey = config.apiKey;
+    that.revert = config.revert;
+    that.startDate = config.dateInf ? moment(config.dateInf) : moment('2007-01-01');
+    that.endDate = config.dateSup ? moment(config.dateSup) : moment();
     that.currentDate = that.revert ? that.endDate : that.startDate
     that.dates = [];
     var doContinue = true;
@@ -57,7 +50,7 @@ function ApiBeatmapCrawler() {
 }
 
 
-ApiBeatmapCrawler.prototype.getBeatmaps = function(since) {
+OsuApiCrawler.prototype.getBeatmaps = function(since) {
     var that = this;
     var d = Q.defer();
     var promise = d.promise;
@@ -74,13 +67,13 @@ ApiBeatmapCrawler.prototype.getBeatmaps = function(since) {
     return promise;
 }
 
-ApiBeatmapCrawler.prototype.nextDate = function () {
+OsuApiCrawler.prototype.nextDate = function () {
     var that = this;
     if(that.currentIndex < that.dates.length - 1){
         that.currentIndex++;
     }
     else{
-        if(nconf.get('dateSup') === null){
+        if(that.config.dateSup === null){
             // we take current date in case we passed a day
             that.dates.shift();
             that.dates.unshift(moment().format('YYYY-MM-DD'));
@@ -89,26 +82,29 @@ ApiBeatmapCrawler.prototype.nextDate = function () {
         that.currentIndex = 0;
     }
 }
-ApiBeatmapCrawler.prototype.getAndWriteBeatmaps = function () {
+OsuApiCrawler.prototype.getAndWriteBeatmaps = function () {
     var that = this;
     Q.when(that.getBeatmaps(that.dates[that.currentIndex])).then(function (sr) {
         var srJSON = JSON.parse(sr);
-        var hasDoneWriting = fileManager.writeBeatmaps(srJSON);
+        var hasDoneWriting = that.analyzer.analyze(srJSON);
         Q.when(hasDoneWriting).then(function () {
             console.log('this batch is done'.green.bold)
             console.log('==============================================================================='.green.bold)
             that.nextDate();
            setTimeout(function(){
                 that.getAndWriteBeatmaps();
-            },  nconf.get('timeoutForOsuAPI'));
+            },  that.config.timeoutForOsuAPI);
         });
     });
 };
 
+OsuApiCrawler.prototype.analyze = function(){
+    this.getAndWriteBeatmaps();
+}
+
+
 module.exports = {
-    config: null,
-    start: function () {
-        var crawler = new ApiBeatmapCrawler();
-        crawler.getAndWriteBeatmaps();
+    get: function (config) {
+        return new OsuApiCrawler(config);
     }
 }

@@ -1,2 +1,0 @@
-- create mini-website secure to manage applications (restart / log, etc.)
-- use websocket.

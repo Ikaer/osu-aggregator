@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www"
+    "analyze": "node ./bin/www"
   },
   "dependencies": {
     "body-parser": "~1.12.4",
@@ -20,6 +20,7 @@
     "http-debug": "^0.1.2",
     "jade": "~1.9.2",
     "jquery": "^2.1.4",
+    "jsonfile": "^2.2.1",
     "jszip": "^2.5.0",
     "less-middleware": "1.0.x",
     "moment": "^2.10.3",

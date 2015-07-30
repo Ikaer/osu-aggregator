@@ -16,16 +16,6 @@ var S = require('string');
 var _ = require('underscore');
 require('colors');
 var util = require('util');
-var nconf = require('nconf');
-nconf.argv();
-var configFilePath = nconf.get('config')
-
-if (undefined === configFilePath || null === configFilePath || '' === configFilePath) {
-    configFilePath = 'config/config.json';
-}
-
-nconf.file(configFilePath);
-
 var request = require('request')
 
 tryParseInt = function (val) {
@@ -142,13 +132,13 @@ var queueManager = new QueueManager();
 queueManager.doNextCall();
 
 
-function Crawler() {
+function Crawler(config) {
     var that = this;
-    this.apiKey = nconf.get('apiKey');
-    this.timeout = nconf.get('updateStatsTimeout');
-    this.currentBeatmapId = nconf.get('crawler_startingId');
+    this.apiKey = config.apiKey;
+    this.timeout = config.updateStatsTimeout;
+    this.currentBeatmapId = config.crawler_startingId;
     this.baseUrl = 'https://osu.ppy.sh/';
-    this.useCrawlDate = nconf.get('useCrawlDate');
+    this.useCrawlDate = config.useCrawlDate;
 
     this.requestPage = function (query, beatmapId) {
         var d = Q.defer();
@@ -293,13 +283,11 @@ function Crawler() {
             that.crawlSpecific();
         }, that.timeout)
     }
-    this.start = function () {
-        that.crawlSpecific();
-    }
+
 }
-var crawler = new Crawler();
-module.exports = {
-    start: function () {
-        crawler.start();
-    }
-};
+Crawler.prototype.start = function(){
+    var that = this;
+    that.crawlSpecific();
+}
+
+module.exports = Crawler;

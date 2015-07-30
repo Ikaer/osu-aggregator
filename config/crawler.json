@@ -1,0 +1,6 @@
+{
+  "updateStatsTimeout":1000,
+  "crawler_startingId": 700000,
+  "useCrawlDate":false,
+  "port":5495
+}

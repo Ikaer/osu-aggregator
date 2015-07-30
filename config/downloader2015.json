@@ -1,7 +1,7 @@
 {
   "timeoutToTransferFiles" : 2000,
   "maxTransfer" : 2,
-  "forceRedownload" : false,
+  "forceRedownload" : true,
   "dateInf": "2015-01-01",
   "dateSup": null,
   "revert":true,
