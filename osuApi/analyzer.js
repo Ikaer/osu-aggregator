@@ -26,7 +26,7 @@ function Analyzer(config) {
     that.allIsDone = Q.defer();
     that.queue = queueManager.getQueue(config);
 }
-Analyzer.prototype.analyze = function (json) {
+Analyzer.prototype.start = function (json) {
     var that = this;
     if (json.length === 0) {
         that.allIsDone.resolve(true);

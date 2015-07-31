@@ -86,7 +86,7 @@ OsuApiCrawler.prototype.getAndWriteBeatmaps = function () {
     var that = this;
     Q.when(that.getBeatmaps(that.dates[that.currentIndex])).then(function (sr) {
         var srJSON = JSON.parse(sr);
-        var hasDoneWriting = that.analyzer.analyze(srJSON);
+        var hasDoneWriting = that.analyzer.start(srJSON);
         Q.when(hasDoneWriting).then(function () {
             console.log('this batch is done'.green.bold)
             console.log('==============================================================================='.green.bold)
@@ -98,7 +98,7 @@ OsuApiCrawler.prototype.getAndWriteBeatmaps = function () {
     });
 };
 
-OsuApiCrawler.prototype.analyze = function(){
+OsuApiCrawler.prototype.start = function(){
     this.getAndWriteBeatmaps();
 }
 

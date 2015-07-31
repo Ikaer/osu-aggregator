@@ -198,7 +198,7 @@ WebsiteBeatmapCrawler.prototype.getAndWriteBeatmaps = function () {
     }, function(err){
 
     }, function(beatmapsFromAPI){
-        that.analyzer.analyze(beatmapsFromAPI);
+        that.analyzer.start(beatmapsFromAPI);
     }).finally(function(){
         that.nextUrl();
         setTimeout(function () {

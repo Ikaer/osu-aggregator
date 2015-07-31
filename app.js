@@ -2,6 +2,7 @@ process.on('uncaughtException', function (e) {
     console.log(e);
 });
 
+
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
@@ -80,26 +81,54 @@ var mongoose = require('mongoose');
 require('./schema/beatmap.js')();
 require('./schema/user.js')();
 require('./schema/userScore.js')();
+
+var cluster = require('cluster');
+var numCPUs = require('os').cpus().length;
+console.log(numCPUs)
 mongoose.connect(privateFile.mongodbPath, function (err) {
     if (err) throw err;
+    if (cluster.isMaster) {
+        cluster.fork({
+            typeOfCrawler: 'crawler'
+        })
+        setTimeout(function () {
+            cluster.fork({
+                typeOfCrawler: 'websiteCrawler'
+            })
+        }, 5000)
+        setTimeout(function () {
+            cluster.fork({
+                typeOfCrawler: 'apiCrawler'
+            })
+        }, 10000)
+    }
+    else {
+        switch (process.env.typeOfCrawler) {
+            case 'crawler':
+                var Crawler = require('./crawlerFactory');
+                var crawler = new Crawler(_.extend(jsonfile.readFileSync('config/crawler.json'), privateFile))
+                crawler.start();
+                break;
+            case 'websiteCrawler':
+                var websiteCrawler = require('./osuApi/websiteBeatmapCrawler')
 
-    var Crawler = require('./crawlerFactory');
-    var crawler = new Crawler(_.extend(jsonfile.readFileSync('config/crawler.json'), privateFile))
-    crawler.start();
+                var graveyardCrawler = websiteCrawler.get(_.extend(jsonfile.readFileSync('config/graveyardCrawler.json'), privateFile))
+                graveyardCrawler.start();
+                var pendingCrawler = websiteCrawler.get(_.extend(jsonfile.readFileSync('config/pendingCrawler.json'), privateFile))
+                pendingCrawler.start();
+                break;
+            case 'apiCrawler':
+                var apiCrawlerFactory = require('./osuApi/crawler');
 
-    var websiteCrawler = require('./osuApi/websiteBeatmapCrawler')
+                var crawler2015 = apiCrawlerFactory.get(_.extend(jsonfile.readFileSync('config/downloader2015.json'), privateFile));
+                crawler2015.start();
+                var crawlerOlder = apiCrawlerFactory.get(_.extend(jsonfile.readFileSync('config/downloaderOlder.json'), privateFile))
+                crawlerOlder.start();
+                break;
+        }
+    }
 
-    var graveyardCrawler = websiteCrawler.get(_.extend(jsonfile.readFileSync('config/graveyardCrawler.json'), privateFile))
-    graveyardCrawler.start();
-    var pendingCrawler = websiteCrawler.get(_.extend(jsonfile.readFileSync('config/pendingCrawler.json'), privateFile))
-    pendingCrawler.start();
 
-    var apiCrawlerFactory = require('./osuApi/crawler');
-
-    var crawler2015 = apiCrawlerFactory.get(_.extend(jsonfile.readFileSync('config/downloader2015.json'), privateFile));
-    crawler2015.analyze();
-    var crawlerOlder = apiCrawlerFactory.get(_.extend(jsonfile.readFileSync('config/downloaderOlder.json'), privateFile))
-    crawlerOlder.analyze();
 });
 
 app.listen('4583')

@@ -49,7 +49,7 @@ var fileTypes = {
     }
 }
 
-//console.log('analyze to look at transfer pile'.red)
+//console.log('start to look at transfer pile'.red)
 function OsuFile(basePath, tempPath, forceRedownload, type, id, lastUpdate) {
     var that = this;
     this.id = id;
