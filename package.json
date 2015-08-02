@@ -6,6 +6,7 @@
     "start": "node ./bin/www"
   },
   "dependencies": {
+    "async": "^1.4.0",
     "body-parser": "~1.12.4",
     "cheerio": "^0.19.0",
     "cheerio-advanced-selectors": "^1.1.0",
@@ -24,7 +25,7 @@
     "jszip": "^2.5.0",
     "less-middleware": "1.0.x",
     "moment": "^2.10.3",
-    "mongoose": "~3.8.0",
+    "mongoose": "^4.1.0",
     "morgan": "~1.5.3",
     "nconf": "^0.7.1",
     "node-zip": "^1.1.1",

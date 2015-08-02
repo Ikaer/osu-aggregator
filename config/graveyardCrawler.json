@@ -10,5 +10,7 @@
   "startFileUpdater":true,
   "source":"graveyard",
   "tempFolder":"graveyard",
-  "port":5493
+  "port":5493,
+  "maxPage": 10,
+  "workerTimeout": 900000
 }

@@ -36,7 +36,7 @@ Analyzer.prototype.start = function (json) {
         var maintenanceDoneCount = 0;
         var lastPercentage = 0;
         var treatedBeatmapSetId = []
-        console.log('0% done'.bgGreen.bold.white);
+        //console.log('0% done'.bgGreen.bold.white);
         _.each(json, function (x) {
             if (undefined === _.find(treatedBeatmapSetId, function (y) {
                     return y === x.beatmapset_id;
@@ -49,7 +49,7 @@ Analyzer.prototype.start = function (json) {
                     var percentage = parseInt(maintenanceDoneCount * 100 / treatedBeatmapSetId.length, 10);
                     if (percentage === 100 || percentage - lastPercentage >= 10) {
                         lastPercentage = percentage;
-                        console.log('%s% done'.bgGreen.bold.white, percentage);
+                        //console.log('%s% done'.bgGreen.bold.white, percentage);
                     }
                 });
                 allMaintenanceIsDone.push(maintenanceDone);

@@ -10,5 +10,7 @@
   "startFileUpdater":true,
   "source":"help_pending",
   "tempFolder":"help_pending",
-  "port":5494
+  "port":5494,
+  "maxPage": 10,
+  "workerTimeout": 900000
 }

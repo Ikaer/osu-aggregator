@@ -1,5 +1,7 @@
 process.on('uncaughtException', function (e) {
-    console.log(e);
+    if (e.message !== 'bind EADDRINUSE') {
+        console.log(e);
+    }
 });
 
 
@@ -83,57 +85,75 @@ require('./schema/user.js')();
 require('./schema/userScore.js')();
 
 var cluster = require('cluster');
-var numCPUs = require('os').cpus().length;
-console.log(numCPUs)
+function createWorker(workerType) {
+    setTimeout(function () {
+        console.log('[%s] starting worker', workerType)
+        var worker = cluster.fork({
+            typeOfCrawler: workerType
+        })
+
+        worker.on('message', function (msg) {
+            if (msg) {
+                if (msg.msgFromWorker === 'JOB_DONE') {
+                    console.log('[%s] worker has done its work', workerType)
+                    console.log('[%s] next job should start in %s minutes', workerType, msg.restartIn / 1000 / 60)
+                    setTimeout(function () {
+                        createWorker(workerType)
+                    }, msg.restartIn)
+                }
+                else {
+                    console.log('[%s] %s', workerType, msg.msgFromWorker)
+                }
+            }
+        });
+        worker.on('exit', function (code, signal) {
+                console.log('[%s] worker has exit with code %s', workerType, code)
+            }
+        )
+    }, 5000)
+}
 mongoose.connect(privateFile.mongodbPath, function (err) {
     if (err) throw err;
     if (cluster.isMaster) {
-        cluster.fork({
-            typeOfCrawler: 'crawler'
-        })
         setTimeout(function () {
-            cluster.fork({
-                typeOfCrawler: 'websiteCrawler'
-            })
+            createWorker('crawler')
+        }, 1000)
+        setTimeout(function () {
+            createWorker('graveyardCrawler')
         }, 5000)
         setTimeout(function () {
-            cluster.fork({
-                typeOfCrawler: 'apiCrawler'
-            })
+            createWorker('pendingCrawler')
         }, 10000)
+        setTimeout(function () {
+            createWorker('downloader2015')
+        }, 15000)
+        setTimeout(function () {
+            createWorker('downloaderOlder')
+        }, 20000)
     }
     else {
+        var crawler = null;
         switch (process.env.typeOfCrawler) {
             case 'crawler':
                 var Crawler = require('./crawlerFactory');
-                var crawler = new Crawler(_.extend(jsonfile.readFileSync('config/crawler.json'), privateFile))
-                crawler.start();
+                crawler = new Crawler(_.extend(jsonfile.readFileSync('config/' + process.env.typeOfCrawler + '.json'), privateFile))
                 break;
-            case 'websiteCrawler':
+            case 'graveyardCrawler':
+            case 'pendingCrawler':
                 var websiteCrawler = require('./osuApi/websiteBeatmapCrawler')
-
-                var graveyardCrawler = websiteCrawler.get(_.extend(jsonfile.readFileSync('config/graveyardCrawler.json'), privateFile))
-                graveyardCrawler.start();
-                var pendingCrawler = websiteCrawler.get(_.extend(jsonfile.readFileSync('config/pendingCrawler.json'), privateFile))
-                pendingCrawler.start();
+                crawler = websiteCrawler.get(_.extend(jsonfile.readFileSync('config/' + process.env.typeOfCrawler + '.json'), privateFile));
                 break;
-            case 'apiCrawler':
+            case 'downloader2015':
+            case 'downloaderOlder':
                 var apiCrawlerFactory = require('./osuApi/crawler');
+                crawler = apiCrawlerFactory.get(_.extend(jsonfile.readFileSync('config/' + process.env.typeOfCrawler + '.json'), privateFile));
 
-                var crawler2015 = apiCrawlerFactory.get(_.extend(jsonfile.readFileSync('config/downloader2015.json'), privateFile));
-                crawler2015.start();
-                var crawlerOlder = apiCrawlerFactory.get(_.extend(jsonfile.readFileSync('config/downloaderOlder.json'), privateFile))
-                crawlerOlder.start();
                 break;
         }
+        crawler.start();
+        console.log('[%s] worker started', process.env.typeOfCrawler)
     }
 
 
 });
-
 app.listen('4583')
-
-
-//nconf.argv();
-//var configFilePath =nconf.get('config')
-//nconf.file('config', configFilePath);

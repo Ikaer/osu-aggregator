@@ -52,7 +52,7 @@ Analyze.prototype.upsertInDatabase = function () {
                 console.log(err);
             }
             else {
-                console.log('beatmapset %s / map %s updated in database'.bgMagenta.white, beatmap.beatmapset_id, beatmap.beatmap_id)
+                //console.log('beatmapset %s / map %s updated in database'.bgMagenta.white, beatmap.beatmapset_id, beatmap.beatmap_id)
             }
             beatmapPromise.resolve(true);
         });

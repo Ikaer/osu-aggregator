@@ -27,7 +27,7 @@ function DownloadQueueManager(config) {
     that.basePath = config.stuffPath;
 
     that.basePathTemp = that.basePath + config.tempFolder;
-    console.log(that.basePathTemp);
+   // console.log(that.basePathTemp);
     try {
         fs.mkdirSync(that.basePathTemp);
     }
@@ -52,12 +52,7 @@ function DownloadQueueManager(config) {
 
     that.deferredId = 0;
     that.pileOfCurrentCalls = [];
-
-
     that.isConnectedDefer.resolve(true);
-
-
-
 }
 
 DownloadQueueManager.prototype.doHttpCall = function (nextCall) {
@@ -83,7 +78,7 @@ DownloadQueueManager.prototype.doHttpCall = function (nextCall) {
             return cd.id !== traceOfDef.id;
         });
     })
-    console.log('%s'.bgBlue.white, nextCall.options.hostname + nextCall.options.path)
+    //console.log('%s'.bgBlue.white, nextCall.options.hostname + nextCall.options.path)
     try {
         if (nextCall.options.url) {
             request.post(

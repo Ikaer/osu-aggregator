@@ -1,7 +1,7 @@
 {
   "timeoutToTransferFiles" : 2000,
   "maxTransfer" : 2,
-  "forceRedownload" : true,
+  "forceRedownload" : false,
   "dateInf": "2015-01-01",
   "dateSup": null,
   "revert":true,
@@ -9,5 +9,6 @@
   "activeFileSizeCheck": false,
   "startFileUpdater":true,
   "tempFolder":"temp2015",
-  "port":5491
+  "port":5491,
+  "workerTimeout": 600000
 }

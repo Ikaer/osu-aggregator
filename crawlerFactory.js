@@ -18,6 +18,11 @@ require('colors');
 var util = require('util');
 var request = require('request')
 
+function wLog(msg){
+    process.send({msgFromWorker: msg})
+}
+
+
 tryParseInt = function (val) {
     var ret = 0;
     try {
@@ -70,7 +75,7 @@ QueueManager.prototype.doHttpCall = function (nextCall) {
             return cd.id !== traceOfDef.id;
         });
     })
-    console.log('%s'.bgBlue.white, nextCall.url)
+    //console.log('%s'.bgBlue.white, nextCall.url)
     try {
         request(nextCall.url, function (error, response, body) {
             if (error || response.statusCode !== 200) {
@@ -134,6 +139,7 @@ queueManager.doNextCall();
 
 function Crawler(config) {
     var that = this;
+    that.doneSoFar = 0;
     this.apiKey = config.apiKey;
     this.timeout = config.updateStatsTimeout;
     this.currentBeatmapId = config.crawler_startingId;
@@ -250,7 +256,7 @@ function Crawler(config) {
                 }
             });
             Q.when(d.promise).then(function (result) {
-                console.log(util.format('%s has been crawled. result: %s', beatmapId, (result === true ? 'ok' : 'not ok')).bgYellow.black)
+               // console.log(util.format('%s has been crawled. result: %s', beatmapId, (result === true ? 'ok' : 'not ok')).bgYellow.black)
             })
 
 
@@ -272,6 +278,11 @@ function Crawler(config) {
         query.exec(function (err, beatmap) {
             if (err) return console.error(err);
             if (null !== beatmap) {
+                that.doneSoFar++;
+                if(that.doneSoFar === 100){
+                    wLog('Stat crawler has finised 100 beatmaps');
+                    that.doneSoFar = 0;
+                }
                 that.currentBeatmapId = beatmap.beatmap_id;
                 that.requestPage('b/' + that.currentBeatmapId + '&m=0', that.currentBeatmapId);
             }

@@ -9,5 +9,6 @@
   "activeFileSizeCheck": false,
   "startFileUpdater":true,
   "tempFolder":"tempOlder",
-  "port":5492
+  "port":5492,
+  "workerTimeout": 900000
 }

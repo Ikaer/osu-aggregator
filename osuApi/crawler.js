@@ -13,6 +13,14 @@ var colors = require('colors')
 
 var analyzer = require('./analyzer.js');
 
+var cluster = require('cluster');
+
+
+function wLog(msg){
+    process.send({msgFromWorker: msg})
+}
+
+
 function OsuApiCrawler(config) {
     var that = this;
     that.analyzer = analyzer.get(config);
@@ -50,13 +58,13 @@ function OsuApiCrawler(config) {
 }
 
 
-OsuApiCrawler.prototype.getBeatmaps = function(since) {
+OsuApiCrawler.prototype.getBeatmaps = function (since) {
     var that = this;
     var d = Q.defer();
     var promise = d.promise;
     var url = util.format('%s%s?k=%s', that.osuAPIUrl, that.urls.getBeatmap, that.apiKey);
     url += util.format('&since=%s', since)
-    console.log(url.bgBlue.white)
+    wLog(url.bgBlue.white)
     request(url, function (error, response, body) {
         if (error) {
             console.error(error);
@@ -69,17 +77,14 @@ OsuApiCrawler.prototype.getBeatmaps = function(since) {
 
 OsuApiCrawler.prototype.nextDate = function () {
     var that = this;
-    if(that.currentIndex < that.dates.length - 1){
+    if (that.currentIndex < that.dates.length - 1) {
         that.currentIndex++;
+        return true;
     }
-    else{
-        if(that.config.dateSup === null){
-            // we take current date in case we passed a day
-            that.dates.shift();
-            that.dates.unshift(moment().format('YYYY-MM-DD'));
-        }
-
-        that.currentIndex = 0;
+    else {
+        process.send({msgFromWorker: 'JOB_DONE', restartIn: that.config.workerTimeout})
+        process.exit(0);
+        return false;
     }
 }
 OsuApiCrawler.prototype.getAndWriteBeatmaps = function () {
@@ -88,17 +93,18 @@ OsuApiCrawler.prototype.getAndWriteBeatmaps = function () {
         var srJSON = JSON.parse(sr);
         var hasDoneWriting = that.analyzer.start(srJSON);
         Q.when(hasDoneWriting).then(function () {
-            console.log('this batch is done'.green.bold)
-            console.log('==============================================================================='.green.bold)
-            that.nextDate();
-           setTimeout(function(){
-                that.getAndWriteBeatmaps();
-            },  that.config.timeoutForOsuAPI);
+            wLog('this batch is done'.green.bold)
+            wLog('==============================================================================='.green.bold)
+            if (that.nextDate() === true) {
+                setTimeout(function () {
+                    that.getAndWriteBeatmaps();
+                }, that.config.timeoutForOsuAPI);
+            }
         });
     });
 };
 
-OsuApiCrawler.prototype.start = function(){
+OsuApiCrawler.prototype.start = function () {
     this.getAndWriteBeatmaps();
 }
 

@@ -20,6 +20,10 @@ var https = require('https')
 var _ = require('underscore');
 var analyzer = require('./analyzer');
 
+function wLog(msg){
+    process.send({msgFromWorker: msg})
+}
+
 function SiteQueue(siteName) {
     var that = this;
     this.name = siteName;
@@ -41,7 +45,7 @@ SiteQueue.prototype.doJob = function(job){
     Q.when(d.promise).timeout(30000, 'timeout').then(function(){
 
     }, function(err){
-        console.log('Timeout!')
+        wLog('Timeout!')
     }).finally(function(){
         that.current--;
     });
@@ -71,52 +75,17 @@ function WebsiteBeatmapCrawler(config) {
             console.error('unknow source')
     }
     that.urls = []
-    for (var i = 1; i <= 125; i++) {
+    for (var i = 1; i <= config.maxPage; i++) {
         that.urls.push(util.format('https://osu.ppy.sh/p/beatmaplist?l=1&r=%s&q=&g=0&la=0&s=4&o=1&m=-1&page=%s',rParam, i));
     }
     that.apiKey = config.apiKey;
     that.currentIndex = 0;
     that.queue = new SiteQueue('osu-api');
 }
-WebsiteBeatmapCrawler.prototype.getBeatmapIdsOfPage = function(url){
-    var pageParsed = Q.defer();
-    var resolvePromise = function(){
-        pageParsed.resolve()
-    }
-    console.log(url.bgBlue.white)
-    https.get(url, function (res) {
-        res.on('error', function (e) {
-            console.error(e);
-        })
-        res.setEncoding('utf8');
-        var body = '';
-        res.on('data', function (chunk) {
-            body += chunk;
-        });
-        res.on('close', function (e) {
-            console.log('connection closed.');
-        })
-        res.on('end', function () {
-            try {
-                var $ = cheerio.load(body);
-                var beatmapDivs = $('.beatmapListing').children('.beatmap');
-                if (beatmapDivs.length > 0) {
-                    var dOfBeatmaps = [];
-                    for (var i = 0; i < beatmapDivs.length; i++) {
-                    }
-                }
-            }
-            catch (e) {
-            }
-        })
-    })
-    return pageParsed.promise();
-}
-
 WebsiteBeatmapCrawler.prototype.parsePage = function (url) {
     var that = this;
     var finalDeferred = Q.defer();
-    console.log(url.bgBlue.white)
+    wLog(url.bgBlue.white)
     https.get(url, function (res) {
         res.on('error', function (e) {
             console.error(e);
@@ -127,7 +96,7 @@ WebsiteBeatmapCrawler.prototype.parsePage = function (url) {
             body += chunk;
         });
         res.on('close', function (e) {
-            console.log('connection closed.');
+            wLog('connection closed.');
         })
         res.on('end', function () {
             try {
@@ -141,7 +110,7 @@ WebsiteBeatmapCrawler.prototype.parsePage = function (url) {
                             var dOfBeatmap = Q.defer();
                             dOfBeatmaps.push(dOfBeatmap.promise);
                             that.queue.addJob(function (d) {
-                                console.log('crawling api ' + i)
+                               // console.log('crawling api ' + i)
                                 var beatmapSetId = $(bd).attr('id');
                                 var beatmapSetsApiUrl = util.format('https://osu.ppy.sh/api/get_beatmaps?s=%s&k=%s', beatmapSetId, that.apiKey)
                                 request(beatmapSetsApiUrl, function (error, response, body) {
@@ -186,7 +155,8 @@ WebsiteBeatmapCrawler.prototype.nextUrl = function () {
         that.currentIndex++;
     }
     else {
-        that.currentIndex = 0;
+        process.send({msgFromWorker: 'JOB_DONE', restartIn: that.config.workerTimeout})
+        process.exit(0);
     }
 }
 
