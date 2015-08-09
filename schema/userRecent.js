@@ -2,10 +2,9 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 
-var UserScoreSchema = new Schema({
+var UserRecentSchema = new Schema({
     "beatmap_id": Number,
     "score": Number,
-    "username": String,
     "count300": Number,
     "count100": Number,
     "count50": Number,
@@ -17,10 +16,9 @@ var UserScoreSchema = new Schema({
     "enabled_mods": Number,         // bitwise flag representation of mods used. see reference
     "user_id": Number,
     "date": Date,
-    "rank": String,
-    "pp": Number
+    "rank": String
 });
 
-mongoose.model('UserScore', UserScoreSchema);
-module.exports = mongoose.model('UserScore');
+mongoose.model('UserRecent', UserRecentSchema);
+module.exports = mongoose.model('UserRecent');
 

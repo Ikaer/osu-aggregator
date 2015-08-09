@@ -19,7 +19,7 @@ var colors = require('colors')
 var https = require('https')
 var _ = require('underscore');
 var analyzer = require('./analyzer');
-
+var events = require('events');
 function wLog(msg){
     process.send({msgFromWorker: msg})
 }
@@ -60,6 +60,7 @@ SiteQueue.prototype.addJob = function (fnOfJob) {
 
 function WebsiteBeatmapCrawler(config) {
     var that = this;
+    events.EventEmitter.call(this);
     that.osuAPIUrl = 'https://osu.ppy.sh'
     that.analyzer = analyzer.get(config)
     that.config = config;
@@ -155,7 +156,7 @@ WebsiteBeatmapCrawler.prototype.nextUrl = function () {
         that.currentIndex++;
     }
     else {
-        process.send({msgFromWorker: 'JOB_DONE', restartIn: that.config.workerTimeout})
+        process.send({msgFromWorker: 'JOB_DONE'})
         process.exit(0);
     }
 }
@@ -171,6 +172,7 @@ WebsiteBeatmapCrawler.prototype.getAndWriteBeatmaps = function () {
         that.analyzer.start(beatmapsFromAPI);
     }).finally(function(){
         that.nextUrl();
+        that.emit('haveDoneSomeWork')
         setTimeout(function () {
             that.getAndWriteBeatmaps();
         }, that.config.timeoutForOsuAPI);
@@ -179,6 +181,9 @@ WebsiteBeatmapCrawler.prototype.getAndWriteBeatmaps = function () {
 WebsiteBeatmapCrawler.prototype.start =function(){
     this.getAndWriteBeatmaps();
 }
+
+WebsiteBeatmapCrawler.prototype.__proto__ = events.EventEmitter.prototype;
+
 module.exports = {
     get: function (config) {
         return new  WebsiteBeatmapCrawler(config);

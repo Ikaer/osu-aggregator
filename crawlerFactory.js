@@ -17,8 +17,9 @@ var _ = require('underscore');
 require('colors');
 var util = require('util');
 var request = require('request')
+var events = require('events');
 
-function wLog(msg){
+function wLog(msg) {
     process.send({msgFromWorker: msg})
 }
 
@@ -27,12 +28,12 @@ tryParseInt = function (val) {
     var ret = 0;
     try {
         ret = parseInt(val, 10);
-        if(isNaN(ret)){
-            ret= 0;
+        if (isNaN(ret)) {
+            ret = 0;
         }
     }
     catch (e) {
-        ret= 0;
+        ret = 0;
     }
     return ret;
 }
@@ -82,7 +83,7 @@ QueueManager.prototype.doHttpCall = function (nextCall) {
                 nextCall.callbackError(error, d);
             }
             else {
-                var json = [];
+                var json = new Array();
                 try {
                     json = JSON.parse(body);
                 }
@@ -139,6 +140,7 @@ queueManager.doNextCall();
 
 function Crawler(config) {
     var that = this;
+    events.EventEmitter.call(this);
     that.doneSoFar = 0;
     this.apiKey = config.apiKey;
     this.timeout = config.updateStatsTimeout;
@@ -149,120 +151,106 @@ function Crawler(config) {
     this.requestPage = function (query, beatmapId) {
         var d = Q.defer();
         https.get(that.baseUrl + query, function (res) {
-            res.on('error', function (e) {
-                console.error(e);
-            })
-            res.setEncoding('utf8');
-            var body = '';
-            res.on('data', function (chunk) {
-                body += chunk;
-            });
-            res.on('close', function (e) {
-                console.log('connection closed.');
-            })
-            res.on('end', function () {
-                try {
-                    var $ = cheerio.load(body);
-
-                    var update = {
-                        "xLastCrawl": new Date(),
-                        "playCount": 0,
-                        "playSuccess": 0,
-                        "favouritedCount": 0,
-                        "genre": null,
-                        "language": null,
-                        "negativeUserRating": 0,
-                        "positiveUserRating": 0,
-                        "tags": [],
-                        "submitted_date": null
-                    }
-                    try {
-                        var $trs = $('table#songinfo').children('tr')
-
-                        var tr3Tds = $trs.eq(3).children('td');
-
-                        tr3Tds.eq(3).find('a').each(function (i, link) {
-                            var text = S($(link).text()).trim().toString();
-                            if (i === 0) {
-                                update.genre = text;
-                            }
-                            else {
-                                update.language = text;
-                            }
-                        })
-
-                        var tr4Tds = $trs.eq(4).children('td');
-                        tr4Tds.eq(1).find('a').each(function (i, link) {
-                            var text = S($(link).text()).trim().toString();
-                            update.tags.push(text);
-                        })
-
-                        tr4Tds.eq(3).find('td').each(function (i, td) {
-                            var text = tryParseInt(S($(td).text()).replaceAll(',', '').trim().toString(), 10);
-                            if (i === 0) {
-                                update.negativeUserRating = text
-                            }
-                            else {
-                                update.positiveUserRating = text;
-                            }
-                        })
-                        var htmlOfPlays = S(tr4Tds.eq(5).html());
-
-                        update.playSuccess = tryParseInt(htmlOfPlays.between('</b> (', ' of ').s, 10);
-                        update.playCount = tryParseInt(htmlOfPlays.between(' of ', ' plays)').s, 10);
-
-
-                        var tr5Tds = $trs.eq(5).children('td');
-                        var htmlOfdates = S(tr5Tds.eq(1).html().split('<')[0]).trim().s;
-
-
-                        var m = moment(htmlOfdates, 'MMM D, YYYY');
-                        update.submitted_date = m.toDate();
-
-                        var tr6Tds = $trs.eq(6).children('td');
-                        var favourited = S(tr6Tds.eq(0).html()).between('<b>Favourited ', ' times</b>').replaceAll(',', '').trim().s;
-                        update.favouritedCount = tryParseInt(favourited, 10)
-                    }
-                    catch (e) {
-
-                    }
-                    Beatmap.update({'beatmap_id': beatmapId}, update, {multi: false}, function (err, doc) {
-                        User.find({}, function (err, users) {
-                            _.each(users, function (u) {
-                                if (u.user_id > 0) {
-                                    var url = util.format('https://osu.ppy.sh/api/get_scores?k=%s&u=%s&b=%s', that.apiKey, u.user_id, beatmapId);
-                                    queueManager.queueNewCall(url, function (json) {
-                                        if (json.length > 0) {
-                                            UserScore.findOneAndUpdate({
-                                                'beatmap_id': beatmapId,
-                                                'user_id': u.user_id
-                                            }, json[0], {upsert: true}, function (err, doc) {
-
-                                            });
-                                        }
-                                    }, function () {
-                                    });
-                                }
-                            })
-                        })
-
-                        if (err) console.log(err)
-                        d.resolve(true);
-                    });
-                }
-                catch (e) {
+                res.on('error', function (e) {
                     console.error(e);
-                    d.resolve(false);
-                }
-            });
-            Q.when(d.promise).then(function (result) {
-               // console.log(util.format('%s has been crawled. result: %s', beatmapId, (result === true ? 'ok' : 'not ok')).bgYellow.black)
+                })
+                res.setEncoding('utf8');
+                var body = '';
+                res.on('data', function (chunk) {
+                    body += chunk;
+                });
+                res.on('close', function (e) {
+                    console.log('connection closed.');
+                })
+                res.on('end', function () {
+                        try {
+                            var $ = cheerio.load(body);
+
+                            var update = {
+                                "xLastCrawl": new Date(),
+                                "playCount": 0,
+                                "playSuccess": 0,
+                                "favouritedCount": 0,
+                                "genre": null,
+                                "language": null,
+                                "negativeUserRating": 0,
+                                "positiveUserRating": 0,
+                                "tags": [],
+                                "submitted_date": null
+                            }
+                            try {
+                                var $trs = $('table#songinfo').children('tr')
+
+                                var tr3Tds = $trs.eq(3).children('td');
+
+                                tr3Tds.eq(3).find('a').each(function (i, link) {
+                                    var text = S($(link).text()).trim().toString();
+                                    if (i === 0) {
+                                        update.genre = text;
+                                    }
+                                    else {
+                                        update.language = text;
+                                    }
+                                })
+
+                                var tr4Tds = $trs.eq(4).children('td');
+                                tr4Tds.eq(1).find('a').each(function (i, link) {
+                                    var text = S($(link).text()).trim().toString();
+                                    update.tags.push(text);
+                                })
+
+                                tr4Tds.eq(3).find('td').each(function (i, td) {
+                                    var text = tryParseInt(S($(td).text()).replaceAll(',', '').trim().toString(), 10);
+                                    if (i === 0) {
+                                        update.negativeUserRating = text
+                                    }
+                                    else {
+                                        update.positiveUserRating = text;
+                                    }
+                                })
+                                var htmlOfPlays = S(tr4Tds.eq(5).html());
+
+                                update.playSuccess = tryParseInt(htmlOfPlays.between('</b> (', ' of ').s, 10);
+                                update.playCount = tryParseInt(htmlOfPlays.between(' of ', ' plays)').s, 10);
+
+
+                                var tr5Tds = $trs.eq(5).children('td');
+                                var htmlOfdates = S(tr5Tds.eq(1).html().split('<')[0]).trim().s;
+
+
+                                var m = moment(htmlOfdates, 'MMM D, YYYY');
+                                update.submitted_date = m.toDate();
+
+                                var tr6Tds = $trs.eq(6).children('td');
+                                var favourited = S(tr6Tds.eq(0).html()).between('<b>Favourited ', ' times</b>').replaceAll(',', '').trim().s;
+                                update.favouritedCount = tryParseInt(favourited, 10)
+                            }
+                            catch (e) {
+
+                            }
+                            Beatmap.update({'beatmap_id': beatmapId}, update, {multi: false}, function (err, doc) {
+                                if (err) console.log(err)
+                                d.resolve(true);
+                            })
+                        }
+                        catch
+                            (e) {
+                            console.error(e);
+                            d.resolve(false);
+                        }
+                    }
+                )
+                ;
+                Q.when(d.promise).then(function (result) {
+                    // console.log(util.format('%s has been crawled. result: %s', beatmapId, (result === true ? 'ok' : 'not ok')).bgYellow.black)
+                })
+
+
+            }
+        ).
+            on('error', function (e) {
+                console.error(e.message);
             })
-
-
-        }).on('error', function (e) {
-            console.error(e.message);
-        })
     }
 
     this.crawlSpecific = function () {
@@ -279,7 +267,7 @@ function Crawler(config) {
             if (err) return console.error(err);
             if (null !== beatmap) {
                 that.doneSoFar++;
-                if(that.doneSoFar === 100){
+                if (that.doneSoFar === 100) {
                     wLog('Stat crawler has finised 100 beatmaps');
                     that.doneSoFar = 0;
                 }
@@ -293,12 +281,17 @@ function Crawler(config) {
         setTimeout(function () {
             that.crawlSpecific();
         }, that.timeout)
+        that.emit('haveDoneSomeWork');
     }
 
 }
-Crawler.prototype.start = function(){
+Crawler.prototype.start = function () {
     var that = this;
     that.crawlSpecific();
 }
+
+
+Crawler.prototype.__proto__ = events.EventEmitter.prototype;
+
 
 module.exports = Crawler;

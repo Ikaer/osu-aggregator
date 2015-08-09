@@ -1,0 +1,4 @@
+{
+  "port":5500,
+  "workerTimeout": 60000
+}

@@ -83,40 +83,61 @@ var mongoose = require('mongoose');
 require('./schema/beatmap.js')();
 require('./schema/user.js')();
 require('./schema/userScore.js')();
-
+require('./schema/userRecent.js')();
+var util = require('util');
+var workers = [];
 var cluster = require('cluster');
-function createWorker(workerType) {
-    setTimeout(function () {
+if (cluster.isMaster) {
+
+    function createWorker(workerType) {
+        var config = _.extend(jsonfile.readFileSync('config/' + workerType + '.json'), privateFile)
         console.log('[%s] starting worker', workerType)
+
         var worker = cluster.fork({
             typeOfCrawler: workerType
         })
-
-        worker.on('message', function (msg) {
-            if (msg) {
-                if (msg.msgFromWorker === 'JOB_DONE') {
-                    console.log('[%s] worker has done its work', workerType)
-                    console.log('[%s] next job should start in %s minutes', workerType, msg.restartIn / 1000 / 60)
-                    setTimeout(function () {
-                        createWorker(workerType)
-                    }, msg.restartIn)
-                }
-                else {
-                    console.log('[%s] %s', workerType, msg.msgFromWorker)
-                }
+        var workerDef = {
+            id: workerType,
+            worker: worker,
+            config: config,
+            pingResponse: null,
+            resetWorker: function (timeout) {
+                console.log('[%s] next job should start in %s minutes', workerDef.id, timeout / 1000 / 60)
+                setTimeout(function () {
+                    createWorker(workerType)
+                }, timeout)
             }
-        });
-        worker.on('exit', function (code, signal) {
-                console.log('[%s] worker has exit with code %s', workerType, code)
+        };
+        workers.push(workerDef);
+        worker.on('message', function (msg) {
+                if (msg) {
+                    console.log('[%s] %s', workerDef.id, msg.msgFromWorker)
+                    if (msg.msgFromWorker === 'JOB_DONE') {
+                        console.log('[%s] worker has done its work', workerDef.id)
+
+                    }
+                }
             }
         )
-    }, 5000)
+        ;
+        worker.on('disconnected', function () {
+            console.log('[%s] worker has comitted suicide %s', workerDef.id)
+        })
+        worker.on('exit', function (code, signal) {
+            console.log('[%s] worker has exit with code %s', workerDef.id, code)
+            workerDef.resetWorker(workerDef.config.workerTimeout)
+        })
+    }
 }
+
 mongoose.connect(privateFile.mongodbPath, function (err) {
     if (err) throw err;
     if (cluster.isMaster) {
         setTimeout(function () {
-            createWorker('crawler')
+            createWorker('userCrawler')
+        }, 1000)
+        setTimeout(function () {
+        createWorker('crawler')
         }, 1000)
         setTimeout(function () {
             createWorker('graveyardCrawler')
@@ -125,33 +146,56 @@ mongoose.connect(privateFile.mongodbPath, function (err) {
             createWorker('pendingCrawler')
         }, 10000)
         setTimeout(function () {
-            createWorker('downloader2015')
+        createWorker('downloader2015')
         }, 15000)
         setTimeout(function () {
             createWorker('downloaderOlder')
         }, 20000)
     }
     else {
+        var killIfNotHealthy_timeout = null
+        var resetKillCountdown = function () {
+            process.send({msgFromWorker: 'I\'ve escaped death for now'.bgRed });
+            killIfNotHealthy_timeout = setTimeout(function () {
+                process.send({msgFromWorker: util.format('I\'m going to kill mysell because i\'m stuck'.bgRed)})
+                process.exit(0);
+            }, 1000 * 60 *10)
+        }
         var crawler = null;
+        var config = _.extend(jsonfile.readFileSync('config/' + process.env.typeOfCrawler + '.json'), privateFile);
         switch (process.env.typeOfCrawler) {
+            case 'userCrawler':
+                var UserCrawler = require('./osuApi/userCrawler');
+                crawler = new UserCrawler(config)
+                break;
             case 'crawler':
                 var Crawler = require('./crawlerFactory');
-                crawler = new Crawler(_.extend(jsonfile.readFileSync('config/' + process.env.typeOfCrawler + '.json'), privateFile))
+                crawler = new Crawler(config)
                 break;
             case 'graveyardCrawler':
             case 'pendingCrawler':
                 var websiteCrawler = require('./osuApi/websiteBeatmapCrawler')
-                crawler = websiteCrawler.get(_.extend(jsonfile.readFileSync('config/' + process.env.typeOfCrawler + '.json'), privateFile));
+                crawler = websiteCrawler.get(config);
                 break;
             case 'downloader2015':
             case 'downloaderOlder':
                 var apiCrawlerFactory = require('./osuApi/crawler');
-                crawler = apiCrawlerFactory.get(_.extend(jsonfile.readFileSync('config/' + process.env.typeOfCrawler + '.json'), privateFile));
-
+                crawler = apiCrawlerFactory.get(config);
                 break;
         }
         crawler.start();
-        console.log('[%s] worker started', process.env.typeOfCrawler)
+        crawler.on('haveDoneSomeWork', function () {
+            resetKillCountdown();
+        })
+        resetKillCountdown();
+        process.send({msgFromWorker: 'I\'am started'})
+        process.on('message', function (msg) {
+            console.log(msg);
+        })
+        process.on('exit', function () {
+
+        })
+
     }
 
 

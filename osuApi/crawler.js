@@ -14,7 +14,7 @@ var colors = require('colors')
 var analyzer = require('./analyzer.js');
 
 var cluster = require('cluster');
-
+var events = require('events')
 
 function wLog(msg){
     process.send({msgFromWorker: msg})
@@ -22,6 +22,7 @@ function wLog(msg){
 
 
 function OsuApiCrawler(config) {
+    events.EventEmitter.call(this);
     var that = this;
     that.analyzer = analyzer.get(config);
     that.config = config;
@@ -82,7 +83,7 @@ OsuApiCrawler.prototype.nextDate = function () {
         return true;
     }
     else {
-        process.send({msgFromWorker: 'JOB_DONE', restartIn: that.config.workerTimeout})
+        process.send({msgFromWorker: 'JOB_DONE'})
         process.exit(0);
         return false;
     }
@@ -95,6 +96,7 @@ OsuApiCrawler.prototype.getAndWriteBeatmaps = function () {
         Q.when(hasDoneWriting).then(function () {
             wLog('this batch is done'.green.bold)
             wLog('==============================================================================='.green.bold)
+            that.emit('haveDoneSomeWork')
             if (that.nextDate() === true) {
                 setTimeout(function () {
                     that.getAndWriteBeatmaps();
@@ -108,7 +110,7 @@ OsuApiCrawler.prototype.start = function () {
     this.getAndWriteBeatmaps();
 }
 
-
+OsuApiCrawler.prototype.__proto__ = events.EventEmitter.prototype;
 module.exports = {
     get: function (config) {
         return new OsuApiCrawler(config);
