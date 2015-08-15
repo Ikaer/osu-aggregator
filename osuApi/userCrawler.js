@@ -124,8 +124,10 @@ UsersCrawler.prototype.start = function () {
     this.crawlers = [];
 
     User.find({}, function (err, users) {
+        var hasCrawlers = false;
         _.each(users, function (u) {
             if (u.user_id) {
+                hasCrawlers = true;
                 u.scores = _.reject(u.scores, function(x, i){
                     return x.user_id !== u.user_id;
                 })
@@ -133,9 +135,14 @@ UsersCrawler.prototype.start = function () {
                     return x.user_id !== u.user_id;
                 })
                 u.save();
+
                 that.crawlers.push(new UserCrawler(that.httpQueue, that.config, u))
             }
         })
+        if(hasCrawlers == false){
+            process.send({msgFromWorker: 'JOB_DONE'})
+            process.exit(0);
+        }
     })
 }
 

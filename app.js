@@ -155,7 +155,7 @@ mongoose.connect(privateFile.mongodbPath, function (err) {
     else {
         var killIfNotHealthy_timeout = null
         var resetKillCountdown = function () {
-            process.send({msgFromWorker: 'I\'ve escaped death for now'.bgRed });
+           // process.send({msgFromWorker: 'I\'ve escaped death for now'.bgRed });
             killIfNotHealthy_timeout = setTimeout(function () {
                 process.send({msgFromWorker: util.format('I\'m going to kill mysell because i\'m stuck'.bgRed)})
                 process.exit(0);
