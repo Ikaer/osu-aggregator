@@ -7,6 +7,8 @@ var UserRecent = require('./userRecent');
 var userSchema = new Schema({
     name: String,
     user_id : Number,
+    lastScoresFetch: Date,
+    lastRecentsFetch: Date,
     scores:[UserScore.schema],
     recents:[UserRecent.schema],
     beatmaps : [Number]

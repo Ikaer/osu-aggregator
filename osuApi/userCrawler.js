@@ -68,23 +68,45 @@ function UsersCrawler(config) {
                 if (json.length > 0) {
                     _.each(json, function (j) {
                         var beatmap_id = parseInt(j.beatmap_id, 10);
-                        var table = task.type === 'best' ? task.user.scores : task.user.recents;
-                        var doc = task.type === 'best' ? new UserScore(j) : new UserRecent(j);
+                        var score = parseInt(j.score, 10);
+                        var indexFound = -1;
+                        if(task.type === 'best'){
+                             indexFound = _.findIndex(task.user.scores, function (s) {
+                                return s.beatmap_id === beatmap_id;
+                            })
 
+                            if(indexFound > -1 && score > task.user.scores[indexFound].score){
+                                task.user.scores.splice(indexFound, 1);
+                                task.user.scores.push(j);
+                            }
 
-
-                        var indexFound = _.findIndex(table, function (s) {
-                            return s.beatmap_id === beatmap_id;
-                        })
-                        if (indexFound === -1) {
-                            table.push(doc);
+                            if (indexFound === -1) {
+                                task.user.scores.push(j);
+                            }
                         }
-                        else {
-                            table[indexFound] = doc;
+                        else{
+                             indexFound = _.findIndex(task.user.recents, function (s) {
+                                return s.beatmap_id === beatmap_id;
+                            })
+                            if(indexFound > -1 && score > task.user.recents[indexFound].score){
+                                task.user.recents.splice(indexFound, 1);
+                                task.user.recents.push(j);
+                            }
+                            if (indexFound === -1) {
+                                task.user.recents.push(j);
+                            }
                         }
+
                     })
                 }
-                task.user.save(function () {
+                if(task.type === 'best'){
+                    task.user.lastScoresFetch = new Date();
+                }
+                else{
+                    task.user.lastRecentsFetch = new Date();
+                }
+
+                task.user.save(function (err) {
                     callback();
                 });
             }
@@ -92,8 +114,8 @@ function UsersCrawler(config) {
     }, 1)
     this.httpQueue.drain= function(){
         that.httpQueue.kill();
-        //process.send({msgFromWorker: 'JOB_DONE'})
-        //process.exit(0);
+        process.send({msgFromWorker: 'JOB_DONE'})
+        process.exit(0);
         return false;
     }
 }
@@ -104,6 +126,13 @@ UsersCrawler.prototype.start = function () {
     User.find({}, function (err, users) {
         _.each(users, function (u) {
             if (u.user_id) {
+                u.scores = _.reject(u.scores, function(x, i){
+                    return x.user_id !== u.user_id;
+                })
+                u.recents = _.reject(u.recents, function(x, i){
+                    return x.user_id !== u.user_id;
+                })
+                u.save();
                 that.crawlers.push(new UserCrawler(that.httpQueue, that.config, u))
             }
         })
