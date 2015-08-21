@@ -19,6 +19,11 @@ var http = require('http-debug').http;
 var analyze = require('./analyse');
 
 var queueManager = require('./queueManager');
+function wLog(msg){
+    process.send({msgFromWorker: msg})
+}
+
+
 
 function Analyzer(config) {
     var that = this;
@@ -28,6 +33,7 @@ function Analyzer(config) {
 }
 Analyzer.prototype.start = function (json) {
     var that = this;
+    that.allIsDone = Q.defer();
     if (json.length === 0) {
         that.allIsDone.resolve(true);
     }
@@ -36,8 +42,17 @@ Analyzer.prototype.start = function (json) {
         var maintenanceDoneCount = 0;
         var lastPercentage = 0;
         var treatedBeatmapSetId = []
-        //console.log('0% done'.bgGreen.bold.white);
+        wLog('0% done'.bgGreen.bold.white);
         _.each(json, function (x) {
+            x.playCount = x.playcount;
+            x.playSuccess= x.passcount;
+            x.maxCombo= x.max_combo;
+            x.favouritedCount= x.favourite_count;
+            delete x.playcount;
+            delete x.passcount;
+            delete x.max_combo;
+            delete x.favourite_count;
+
             if (undefined === _.find(treatedBeatmapSetId, function (y) {
                     return y === x.beatmapset_id;
                 })) {
@@ -49,13 +64,13 @@ Analyzer.prototype.start = function (json) {
                     var percentage = parseInt(maintenanceDoneCount * 100 / treatedBeatmapSetId.length, 10);
                     if (percentage === 100 || percentage - lastPercentage >= 10) {
                         lastPercentage = percentage;
-                        //console.log('%s% done'.bgGreen.bold.white, percentage);
+                        wLog(util.format('%s % done'.bgGreen.bold.white, percentage));
                     }
                 });
                 allMaintenanceIsDone.push(maintenanceDone);
             }
         });
-        Q.allSettled(allMaintenanceIsDone).finally(function () {
+        Q.allSettled(allMaintenanceIsDone).then(function () {
             that.allIsDone.resolve(true);
         });
     }

@@ -134,10 +134,13 @@ mongoose.connect(privateFile.mongodbPath, function (err) {
     if (err) throw err;
     if (cluster.isMaster) {
         setTimeout(function () {
+            createWorker('scoreCrawler')
+        }, 1000)
+        setTimeout(function () {
             createWorker('userCrawler')
         }, 1000)
         setTimeout(function () {
-        createWorker('crawler')
+            createWorker('crawler')
         }, 1000)
         setTimeout(function () {
             createWorker('graveyardCrawler')
@@ -146,7 +149,7 @@ mongoose.connect(privateFile.mongodbPath, function (err) {
             createWorker('pendingCrawler')
         }, 10000)
         setTimeout(function () {
-        createWorker('downloader2015')
+            createWorker('downloader2015')
         }, 15000)
         setTimeout(function () {
             createWorker('downloaderOlder')
@@ -155,7 +158,7 @@ mongoose.connect(privateFile.mongodbPath, function (err) {
     else {
         var killIfNotHealthy_timeout = null
         var resetKillCountdown = function () {
-           // process.send({msgFromWorker: 'I\'ve escaped death for now'.bgRed });
+            //process.send({msgFromWorker: 'I\'ve escaped death for now'.bgRed });
             killIfNotHealthy_timeout = setTimeout(function () {
                 process.send({msgFromWorker: util.format('I\'m going to kill mysell because i\'m stuck'.bgRed)})
                 process.exit(0);
@@ -167,6 +170,10 @@ mongoose.connect(privateFile.mongodbPath, function (err) {
             case 'userCrawler':
                 var UserCrawler = require('./osuApi/userCrawler');
                 crawler = new UserCrawler(config)
+                break;
+            case 'scoreCrawler':
+                var ScoresCrawler = require('./osuApi/scoreCrawler');
+                crawler = new ScoresCrawler(config);
                 break;
             case 'crawler':
                 var Crawler = require('./crawlerFactory');

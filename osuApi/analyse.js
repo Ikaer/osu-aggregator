@@ -19,6 +19,10 @@ var http = require('http-debug').http;
 
 var mapTools = require('./mapTools')
 var osuFiles = require('./osuFiles');
+function wLog(msg){
+    process.send({msgFromWorker: msg})
+}
+
 function Analyze(queue, libraryPath, tempFolder, forceRedownload, firstBeatmap, othersBeatmaps) {
     var that = this;
     this.id = firstBeatmap.beatmapset_id;
@@ -33,7 +37,7 @@ function Analyze(queue, libraryPath, tempFolder, forceRedownload, firstBeatmap, 
     this.toUpdate = false;
 }
 
-Analyze.prototype.upsertInDatabase = function () {
+Analyze.prototype.updateFileInfoInDatabase = function () {
     var isUpserted = Q.defer();
     var that = this;
     var dArray = [];
@@ -41,13 +45,12 @@ Analyze.prototype.upsertInDatabase = function () {
 
         var beatmapPromise = Q.defer();
         dArray.push(beatmapPromise.promise);
-        var simpleB = beatmap.toJSON();
+        var simpleB = {};
         simpleB.mp3_403 = that.files.mp3.get403 ? new Date() : null;
         simpleB.image_403 = that.files.image.get403 ? new Date() : null;
         simpleB.largeImage_403 = that.files.largeImage.get403 ? new Date() : null;
         simpleB.osz_403 = that.files.osz.get403 ? new Date() : null;
-        delete simpleB._id;
-        Beatmap.findOneAndUpdate({'beatmap_id': beatmap.beatmap_id}, simpleB, {upsert: true}, function (err, doc) {
+        Beatmap.findOneAndUpdate({'beatmap_id': beatmap.beatmap_id}, simpleB, {upsert: false}, function (err, doc) {
             if (err) {
                 console.log(err);
             }
@@ -63,6 +66,7 @@ Analyze.prototype.upsertInDatabase = function () {
     }).fail(function () {
         isUpserted.resolve(false);
     })
+    return isUpserted.promise;
 }
 Analyze.prototype.queueDownload = function () {
     var that = this;
@@ -71,9 +75,24 @@ Analyze.prototype.queueDownload = function () {
     _.each(filesToDownload, function (f) {
         that.queue.queueNewCall(f.httpOptions, f.callbackToWrite, f.callbackToWriteError)
     });
-    Q.allSettled(_.map(filesToDownload, function (f) {
+    var downloadsOk = _.map(filesToDownload, function (f) {
         return f.isDownloaded;
-    })).finally(function () {
+    });
+    //_.each(that.beatmaps, function (beatmap) {
+    //    var scoreToGet = Q.defer();
+    //    downloadsOk.push(scoreToGet.promise)
+    //    that.queue.queueNewCall({
+    //        isScoreUrl: true,
+    //        beatmapId: beatmap.beatmap_id
+    //    }, function(score){
+    //        scoreToGet.resolve();
+    //    }, function(err){
+    //        scoreToGet.resolve();
+    //    })
+    //});
+
+
+    Q.allSettled(downloadsOk).finally(function () {
         d.resolve();
     })
     return d.promise;
@@ -82,12 +101,36 @@ Analyze.prototype.update = function (isUpdated) {
     var that = this;
 
     Q.when(that.queueDownload()).finally(function () {
-        Q.when(that.upsertInDatabase()).finally(function () {
+        Q.when(that.updateFileInfoInDatabase()).finally(function () {
             isUpdated.resolve();
         })
     });
 }
-Analyze.prototype.mustBeUpdated = function () {
+Analyze.prototype.updateDatabase = function () {
+    var that = this;
+    var isUpserted = Q.defer();
+    var dArray = [];
+    _.each(that.beatmaps, function (beatmap) {
+        var beatmapPromise = Q.defer();
+        dArray.push(beatmapPromise.promise);
+        var simpleB = beatmap.toJSON();
+        delete simpleB._id;
+        Beatmap.findOneAndUpdate({'beatmap_id': beatmap.beatmap_id}, simpleB, {upsert: true}, function (err, doc) {
+            if (err) {
+                console.log(err);
+            }
+            beatmapPromise.resolve(true);
+        });
+    });
+    Q.allSettled(dArray).then(function () {
+        isUpserted.resolve(true);
+    }).fail(function () {
+        isUpserted.resolve(false);
+    })
+    return isUpserted.promise;
+}
+
+Analyze.prototype.filesMustBeUpdated = function () {
     var that = this;
     var d = Q.defer()
     var databaseVerifications = [];
@@ -129,7 +172,7 @@ Analyze.prototype.mustBeUpdated = function () {
 
             that.toUpdate = (false === databaseIsOk || false === filesAreOk || false === directoryIsOk);
             if (that.toUpdate === true) {
-               // console.log('[%s] toUpdate: %s, files ok: %s, directory ok: %s, database ok: %s'.red, that.id, that.toUpdate, filesAreOk, directoryIsOk, databaseIsOk)
+                //wLog('[%s] toUpdate: %s, files ok: %s, directory ok: %s, database ok: %s'.red, that.id, that.toUpdate, filesAreOk, directoryIsOk, databaseIsOk)
             }
             d.resolve(true);
         }).fail(function () {
@@ -146,16 +189,19 @@ Analyze.prototype.doMaintance = function () {
     var that = this;
 
     var d = Q.defer();
-    Q.when(that.mustBeUpdated()).then(function () {
+    var fileUpdateDefer = Q.defer();
+    Q.when(that.filesMustBeUpdated()).then(function () {
         if (that.toUpdate === true) {
-            that.update(d);
+            that.update(fileUpdateDefer);
         }
         else {
-            d.resolve();
+            fileUpdateDefer.resolve();
         }
-    }).fail(function () {
-        d.resolve();
-    });
+        // we update database no matter what we've done with files to update play count and score.
+        Q.allSettled([that.updateDatabase(), fileUpdateDefer.promise]).then(function () {
+            d.resolve();
+        })
+    })
     return d.promise;
 }
 

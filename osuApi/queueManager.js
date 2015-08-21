@@ -25,9 +25,9 @@ function DownloadQueueManager(config) {
     that.maxTransfer = config.maxTransfer;
     that.forceRedownload = config.forceRedownload;
     that.basePath = config.stuffPath;
-
+    that.apiKey = config.apiKey;
     that.basePathTemp = that.basePath + config.tempFolder;
-   // console.log(that.basePathTemp);
+    // console.log(that.basePathTemp);
     try {
         fs.mkdirSync(that.basePathTemp);
     }
@@ -54,7 +54,7 @@ function DownloadQueueManager(config) {
     that.pileOfCurrentCalls = [];
     that.isConnectedDefer.resolve(true);
 }
-
+//url: 'https://osu.ppy.sh/api/get_scores?k='+that.apiKey+'&b=737331&mods=0',
 DownloadQueueManager.prototype.doHttpCall = function (nextCall) {
     var d = Q.defer();
     var that = this;
@@ -80,6 +80,22 @@ DownloadQueueManager.prototype.doHttpCall = function (nextCall) {
     })
     //console.log('%s'.bgBlue.white, nextCall.options.hostname + nextCall.options.path)
     try {
+        //if (nextCall.options.isScoreUrl === true) {
+        //    request.get('https://osu.ppy.sh/api/get_scores?k=' + that.apiKey + '&b=' + nextCall.options.beatmapId + '&mods=0', function (error, response, body) {
+        //        if (error === null) {
+        //            var scores = JSON.parse(body);
+        //            if(scores.length >0){
+        //                var bestScore = scores[0];
+        //                if(bestScore.rank==="XH" && bestScore.perfect === "1")
+        //            }
+        //            nextCall.callback(score);
+        //        }
+        //        else{
+        //
+        //        }
+        //    });
+        //}
+        //else
         if (nextCall.options.url) {
             request.post(
                 'https://osu.ppy.sh/forum/ucp.php?mode=login',

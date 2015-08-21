@@ -168,9 +168,6 @@ function Crawler(config) {
 
                             var update = {
                                 "xLastCrawl": new Date(),
-                                "playCount": 0,
-                                "playSuccess": 0,
-                                "favouritedCount": 0,
                                 "genre": null,
                                 "language": null,
                                 "negativeUserRating": 0,
@@ -208,11 +205,6 @@ function Crawler(config) {
                                         update.positiveUserRating = text;
                                     }
                                 })
-                                var htmlOfPlays = S(tr4Tds.eq(5).html());
-
-                                update.playSuccess = tryParseInt(htmlOfPlays.between('</b> (', ' of ').s, 10);
-                                update.playCount = tryParseInt(htmlOfPlays.between(' of ', ' plays)').s, 10);
-
 
                                 var tr5Tds = $trs.eq(5).children('td');
                                 var htmlOfdates = S(tr5Tds.eq(1).html().split('<')[0]).trim().s;
@@ -220,10 +212,6 @@ function Crawler(config) {
 
                                 var m = moment(htmlOfdates, 'MMM D, YYYY');
                                 update.submitted_date = m.toDate();
-
-                                var tr6Tds = $trs.eq(6).children('td');
-                                var favourited = S(tr6Tds.eq(0).html()).between('<b>Favourited ', ' times</b>').replaceAll(',', '').trim().s;
-                                update.favouritedCount = tryParseInt(favourited, 10)
                             }
                             catch (e) {
 
