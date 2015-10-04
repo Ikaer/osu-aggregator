@@ -20,7 +20,7 @@ var request = require('request')
 var events = require('events');
 
 function wLog(msg) {
-    process.send({msgFromWorker: msg})
+    console.log(msg);
 }
 
 
@@ -63,7 +63,7 @@ QueueManager.prototype.doHttpCall = function (nextCall) {
     };
     that.pileOfCurrentCalls.push(traceOfDef)
 
-    Q.when(d.promise).timeout(100000, 'timeout').then(function () {
+    Q.when(d.promise).timeout(180000, 'timeout').then(function () {
     }, function (err) {
         if (err.message == 'timeout') {
             console.error('Take too much time to resolve %s. Go elsewhere', nextCall.url)
@@ -140,7 +140,6 @@ queueManager.doNextCall();
 
 function Crawler(config) {
     var that = this;
-    events.EventEmitter.call(this);
     that.doneSoFar = 0;
     this.apiKey = config.apiKey;
     this.timeout = config.updateStatsTimeout;
@@ -255,6 +254,7 @@ function Crawler(config) {
             if (err) return console.error(err);
             if (null !== beatmap) {
                 that.doneSoFar++;
+                wLog('Stat crawler has done beatmap');
                 if (that.doneSoFar === 100) {
                     wLog('Stat crawler has finised 100 beatmaps');
                     that.doneSoFar = 0;
@@ -269,7 +269,6 @@ function Crawler(config) {
         setTimeout(function () {
             that.crawlSpecific();
         }, that.timeout)
-        that.emit('haveDoneSomeWork');
     }
 
 }
@@ -278,8 +277,6 @@ Crawler.prototype.start = function () {
     that.crawlSpecific();
 }
 
-
-Crawler.prototype.__proto__ = events.EventEmitter.prototype;
 
 
 module.exports = Crawler;

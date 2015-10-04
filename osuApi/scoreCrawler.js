@@ -19,9 +19,6 @@
  - mettre une liste "Telechargement r?cents"
 
  */
-process.on('uncaughtException', function (err) {
-    var e = err;
-})
 
 var mongoose = require('mongoose')
 var Beatmap = mongoose.model("Beatmap");
@@ -86,7 +83,6 @@ function ScoresCrawler(config) {
     }, 1)
     this.httpQueue.drain = function () {
         that.httpQueue.kill();
-        process.send({msgFromWorker: 'JOB_DONE'})
         process.exit(0);
         return false;
     }
@@ -106,7 +102,6 @@ ScoresCrawler.prototype.start = function () {
     })
 }
 
-ScoresCrawler.prototype.__proto__ = events.EventEmitter.prototype;
 
 
 module.exports = ScoresCrawler;

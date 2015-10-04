@@ -21,7 +21,7 @@ var _ = require('underscore');
 var analyzer = require('./analyzer');
 var events = require('events');
 function wLog(msg){
-    process.send({msgFromWorker: msg})
+    console.log(msg);
 }
 
 function SiteQueue(siteName) {
@@ -60,7 +60,6 @@ SiteQueue.prototype.addJob = function (fnOfJob) {
 
 function WebsiteBeatmapCrawler(config) {
     var that = this;
-    events.EventEmitter.call(this);
     that.osuAPIUrl = 'https://osu.ppy.sh'
     that.analyzer = analyzer.get(config)
     that.config = config;
@@ -106,8 +105,9 @@ WebsiteBeatmapCrawler.prototype.parsePage = function (url) {
                 if (beatmapDivs.length > 0) {
 
                     var dOfBeatmaps = [];
+                    var beatmaps = [];
                     for (var i = 0; i < beatmapDivs.length; i++) {
-                        (function (bd, i) {
+                        (function (bd, i, beatmapsArray) {
                             var dOfBeatmap = Q.defer();
                             dOfBeatmaps.push(dOfBeatmap.promise);
                             that.queue.addJob(function (d) {
@@ -118,27 +118,27 @@ WebsiteBeatmapCrawler.prototype.parsePage = function (url) {
                                     if (error) {
                                         console.error(error);
                                         d.resolve();
-                                        dOfBeatmap.resolve();
+                                        dOfBeatmap.resolve(true);
                                     } else {
                                         try {
                                             var beatmaps = JSON.parse(body);
-                                            finalDeferred.notify(beatmaps);
-                                            dOfBeatmap.resolve();
+                                            Array.prototype.push.apply(beatmapsArray, beatmaps);
+                                            dOfBeatmap.resolve(true);
                                             d.resolve();
                                         }
                                         catch (e) {
                                             console.error(e);
                                             d.resolve();
-                                            dOfBeatmap.resolve();
+                                            dOfBeatmap.resolve(true);
                                         }
                                     }
                                 });
                             })
-                        }(beatmapDivs[i], i))
+                        }(beatmapDivs[i], i, beatmaps))
                     }
 
                     Q.all(dOfBeatmaps).finally(function () {
-                        finalDeferred.resolve();
+                        finalDeferred.resolve(beatmaps);
                     })
                 }
             }
@@ -156,7 +156,6 @@ WebsiteBeatmapCrawler.prototype.nextUrl = function () {
         that.currentIndex++;
     }
     else {
-        process.send({msgFromWorker: 'JOB_DONE'})
         process.exit(0);
     }
 }
@@ -165,14 +164,14 @@ WebsiteBeatmapCrawler.prototype.nextUrl = function () {
 WebsiteBeatmapCrawler.prototype.getAndWriteBeatmaps = function () {
     var that = this;
     Q.when(that.parsePage(that.urls[that.currentIndex])).then(function (beatmapsFromAPI) {
-
-    }, function(err){
-
-    }, function(beatmapsFromAPI){
-        that.analyzer.start(beatmapsFromAPI);
-    }).finally(function(){
+        Q.when(that.analyzer.start(beatmapsFromAPI)).finally(function(){
+            that.nextUrl();
+            setTimeout(function () {
+                that.getAndWriteBeatmaps();
+            }, that.config.timeoutForOsuAPI);
+        });
+    }, function(){
         that.nextUrl();
-        that.emit('haveDoneSomeWork')
         setTimeout(function () {
             that.getAndWriteBeatmaps();
         }, that.config.timeoutForOsuAPI);
@@ -182,7 +181,6 @@ WebsiteBeatmapCrawler.prototype.start =function(){
     this.getAndWriteBeatmaps();
 }
 
-WebsiteBeatmapCrawler.prototype.__proto__ = events.EventEmitter.prototype;
 
 module.exports = {
     get: function (config) {

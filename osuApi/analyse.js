@@ -20,7 +20,7 @@ var http = require('http-debug').http;
 var mapTools = require('./mapTools')
 var osuFiles = require('./osuFiles');
 function wLog(msg){
-    process.send({msgFromWorker: msg})
+    console.log(msg);
 }
 
 function Analyze(queue, libraryPath, tempFolder, forceRedownload, firstBeatmap, othersBeatmaps) {

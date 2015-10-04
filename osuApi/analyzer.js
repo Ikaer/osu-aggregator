@@ -20,7 +20,7 @@ var analyze = require('./analyse');
 
 var queueManager = require('./queueManager');
 function wLog(msg){
-    process.send({msgFromWorker: msg})
+    console.log( msg);
 }
 
 
