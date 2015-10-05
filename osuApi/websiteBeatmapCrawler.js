@@ -19,7 +19,6 @@ var colors = require('colors')
 var https = require('https')
 var _ = require('underscore');
 var analyzer = require('./analyzer');
-var events = require('events');
 function wLog(msg){
     console.log(msg);
 }

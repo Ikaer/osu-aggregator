@@ -40,7 +40,11 @@ mongoose.connect(privateFile.mongodbPath, function (err) {
 
 
             var crawler = null;
-            switch (workerType) {
+            switch (workerType){
+                case 'specificBeatmapsCrawler':
+                    var specificCrawler = require('./osuApi/specificBeatmapsCrawler');
+                    crawler = specificCrawler.get(config);
+                    break;
                 case 'userCrawler':
                     var UserCrawler = require('./osuApi/userCrawler');
                     crawler = new UserCrawler(config)
