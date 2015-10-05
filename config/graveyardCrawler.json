@@ -1,8 +1,8 @@
 {
   "timeoutToTransferFiles" : 2000,
   "maxTransfer" : 2,
-  "forceRedownload" : true,
-  "dateInf": "2015-01-01",
+  "forceRedownload" : false,
+  "dateInf": "2007-01-01",
   "dateSup": null,
   "revert":true,
   "timeoutForOsuAPI": 10000,
@@ -11,6 +11,6 @@
   "source":"graveyard",
   "tempFolder":"graveyard",
   "port":5493,
-  "maxPage": 10,
+  "maxPage": 125,
   "workerTimeout": 900000
 }

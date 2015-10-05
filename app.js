@@ -22,9 +22,18 @@ var util = require('util');
 var nconf = require('nconf');
 nconf.argv()
 var t = nconf.get('T');
+
+
+var dbConnect = function(){
 mongoose.connect(privateFile.mongodbPath, function (err) {
-    if (err) throw err;
-    if (undefined !== t) {
+    if (err) {
+        if(err.message == 'connect ECONNREFUSED 127.0.0.1:27017'){
+            setTimeout(dbConnect, 5000);
+        }
+        else throw err;
+    }
+    else{
+        if (undefined !== t) {
         function createWorker(workerType) {
             var config = _.extend(jsonfile.readFileSync('config/' + workerType + '.json'), privateFile)
             console.log('[%s] starting worker', workerType)
@@ -60,4 +69,7 @@ mongoose.connect(privateFile.mongodbPath, function (err) {
 
         createWorker(t);
     }
+    }
 });
+}
+dbConnect();

@@ -1,7 +1,7 @@
 {
   "timeoutToTransferFiles" : 2000,
   "maxTransfer" : 2,
-  "forceRedownload" : true,
+  "forceRedownload" : false,
   "dateInf": "2015-01-01",
   "dateSup": null,
   "revert":true,
@@ -11,6 +11,6 @@
   "source":"help_pending",
   "tempFolder":"help_pending",
   "port":5494,
-  "maxPage": 10,
+  "maxPage": 125,
   "workerTimeout": 900000
 }
