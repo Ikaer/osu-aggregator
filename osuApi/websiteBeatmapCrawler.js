@@ -70,6 +70,9 @@ function WebsiteBeatmapCrawler(config) {
         case 'graveyard':
             rParam = 5;
             break;
+        case 'ranked':
+            rParam = 0;
+            break;
         default:
             console.error('unknow source')
     }

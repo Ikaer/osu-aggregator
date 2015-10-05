@@ -1,13 +1,16 @@
 {
   "timeoutToTransferFiles" : 2000,
   "maxTransfer" : 2,
-  "forceRedownload" : true,
-  "dateInf": null,
+  "forceRedownload" : false,
+  "dateInf": "2007-01-01",
   "dateSup": null,
   "revert":true,
   "timeoutForOsuAPI": 10000,
   "activeFileSizeCheck": false,
   "startFileUpdater":true,
-  "tempFolder":"specific",
-  "ids":[335828,243319,342162,301189,272679]
+  "source":"ranked",
+  "tempFolder":"ranked",
+  "port":5494,
+  "maxPage": 125,
+  "workerTimeout": 900000
 }

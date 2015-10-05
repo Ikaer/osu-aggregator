@@ -1,9 +1,4 @@
-
-
-
-
-
-require("console-stamp")(console, {pattern:"yyyy-mm-dd HH:MM:ss", label:false})
+require("console-stamp")(console, {pattern: "yyyy-mm-dd HH:MM:ss", label: false})
 
 var _ = require('underscore');
 
@@ -24,56 +19,57 @@ nconf.argv()
 var t = nconf.get('T');
 
 
-var dbConnect = function(){
-mongoose.connect(privateFile.mongodbPath, function (err) {
-    if (err) {
-        if(err.message == 'connect ECONNREFUSED 127.0.0.1:27017'){
-            setTimeout(dbConnect, 5000);
-        }
-        else throw err;
-    }
-    else{
-        if (undefined !== t) {
-        function createWorker(workerType) {
-            var config = _.extend(jsonfile.readFileSync('config/' + workerType + '.json'), privateFile)
-            console.log('[%s] starting worker', workerType)
-
-
-            var crawler = null;
-            switch (workerType){
-                case 'specificBeatmapsCrawler':
-                    var specificCrawler = require('./osuApi/specificBeatmapsCrawler');
-                    crawler = specificCrawler.get(config);
-                    break;
-                case 'userCrawler':
-                    var UserCrawler = require('./osuApi/userCrawler');
-                    crawler = new UserCrawler(config)
-                    break;
-                case 'scoreCrawler':
-                    var ScoresCrawler = require('./osuApi/scoreCrawler');
-                    crawler = new ScoresCrawler(config);
-                    break;
-                case 'crawler':
-                    var Crawler = require('./crawlerFactory');
-                    crawler = new Crawler(config)
-                    break;
-                case 'graveyardCrawler':
-                case 'pendingCrawler':
-                    var websiteCrawler = require('./osuApi/websiteBeatmapCrawler')
-                    crawler = websiteCrawler.get(config);
-                    break;
-                case 'downloader2015':
-                case 'downloaderOlder':
-                    var apiCrawlerFactory = require('./osuApi/crawler');
-                    crawler = apiCrawlerFactory.get(config);
-                    break;
+var dbConnect = function () {
+    mongoose.connect(privateFile.mongodbPath, function (err) {
+        if (err) {
+            if (err.message == 'connect ECONNREFUSED 127.0.0.1:27017') {
+                setTimeout(dbConnect, 5000);
             }
-            crawler.start();
+            else throw err;
         }
+        else {
+            if (undefined !== t) {
+                function createWorker(workerType) {
+                    var config = _.extend(jsonfile.readFileSync('config/' + workerType + '.json'), privateFile)
+                    console.log('[%s] starting worker', workerType)
 
-        createWorker(t);
-    }
-    }
-});
+
+                    var crawler = null;
+                    switch (workerType) {
+                        case 'specificBeatmapsCrawler':
+                            var specificCrawler = require('./osuApi/specificBeatmapsCrawler');
+                            crawler = specificCrawler.get(config);
+                            break;
+                        case 'userCrawler':
+                            var UserCrawler = require('./osuApi/userCrawler');
+                            crawler = new UserCrawler(config)
+                            break;
+                        case 'scoreCrawler':
+                            var ScoresCrawler = require('./osuApi/scoreCrawler');
+                            crawler = new ScoresCrawler(config);
+                            break;
+                        case 'crawler':
+                            var Crawler = require('./crawlerFactory');
+                            crawler = new Crawler(config)
+                            break;
+                        case 'graveyardCrawler':
+                        case 'pendingCrawler':
+                        case 'rankedCrawler':
+                            var websiteCrawler = require('./osuApi/websiteBeatmapCrawler')
+                            crawler = websiteCrawler.get(config);
+                            break;
+                        case 'downloader2015':
+                        case 'downloaderOlder':
+                            var apiCrawlerFactory = require('./osuApi/crawler');
+                            crawler = apiCrawlerFactory.get(config);
+                            break;
+                    }
+                    crawler.start();
+                }
+
+                createWorker(t);
+            }
+        }
+    });
 }
 dbConnect();
