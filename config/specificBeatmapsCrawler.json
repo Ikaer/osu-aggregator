@@ -1,0 +1,13 @@
+{
+  "timeoutToTransferFiles" : 2000,
+  "maxTransfer" : 2,
+  "forceRedownload" : true,
+  "dateInf": null,
+  "dateSup": null,
+  "revert":true,
+  "timeoutForOsuAPI": 10000,
+  "activeFileSizeCheck": false,
+  "startFileUpdater":true,
+  "tempFolder":"specific",
+  "ids":[272679,301189]
+}
