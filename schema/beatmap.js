@@ -51,7 +51,8 @@ module.exports = function() {
                 "mp3_403":Date,
                 "largeImage_403":Date,
                 "image_403":Date,
-                "osz_403":Date
+                "osz_403":Date,
+                "downloadIsNoLongerAvailable":Boolean
         });
         mongoose.model('Beatmap', BeatmapSchema);
 };

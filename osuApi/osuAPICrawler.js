@@ -95,9 +95,7 @@ OsuApiCrawler.prototype.getAndWriteBeatmaps = function () {
             wLog('this batch is done'.green.bold)
             wLog('==============================================================================='.green.bold)
             if (that.nextDate() === true) {
-                setTimeout(function () {
                     that.getAndWriteBeatmaps();
-                }, that.config.timeoutForOsuAPI);
             }
         });
     });

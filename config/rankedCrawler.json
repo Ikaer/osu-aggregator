@@ -1,6 +1,6 @@
 {
   "timeoutToTransferFiles" : 2000,
-  "maxTransfer" : 2,
+  "maxTransfer" : 1,
   "forceRedownload" : false,
   "dateInf": "2007-01-01",
   "dateSup": null,
@@ -11,6 +11,6 @@
   "source":"ranked",
   "tempFolder":"ranked",
   "port":5494,
-  "maxPage": 125,
+  "maxPage": 10,
   "workerTimeout": 900000
 }

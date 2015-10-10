@@ -254,7 +254,6 @@ function Crawler(config) {
             if (err) return console.error(err);
             if (null !== beatmap) {
                 that.doneSoFar++;
-                wLog('Stat crawler has done beatmap');
                 if (that.doneSoFar === 100) {
                     wLog('Stat crawler has finised 100 beatmaps');
                     that.doneSoFar = 0;
@@ -263,7 +262,7 @@ function Crawler(config) {
                 that.requestPage('b/' + that.currentBeatmapId + '&m=0', that.currentBeatmapId);
             }
             else {
-                that.currentBeatmapId = 10000000000;
+                process.exit(0)
             }
         });
         setTimeout(function () {

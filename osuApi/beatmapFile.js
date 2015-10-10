@@ -9,7 +9,7 @@ var fs = require('fs');
 var util = require('util');
 var _ = require('underscore');
 require('colors');
-
+var S = require('string');
 
 var request = require('request');
 var tough = require('tough-cookie');
@@ -68,6 +68,7 @@ function OsuFile(basePath, tempPath, forceRedownload, type, id, lastUpdate) {
     }
 
     this.httpOptions = {
+        id:id,
         hostname: this.host,
         port: 80,
         path: this.path,
@@ -123,14 +124,17 @@ function OsuFile(basePath, tempPath, forceRedownload, type, id, lastUpdate) {
                         try {
                             var statOfTempFile = fs.statSync(that.tempFilePath);
                             statOfTempFile = statOfTempFile["size"];
-                            var zipIsOk = true;
+                            var zipIsOk = true, data;
                             if (that.type === 'osz') {
                                 try {
-                                    var data = fs.readFileSync(that.tempFilePath)
+                                    data = fs.readFileSync(that.tempFilePath)
                                     var zip = jszip(data)
                                 }
                                 catch (e) {
                                     zipIsOk = false;
+                                    if(S(data).contains('This download is no longer available')){
+                                        that.downloadIsNoLongerAvailable = true;
+                                    }
                                 }
                             }
                             if (statOfTempFile === 0 || zipIsOk === false) {
@@ -201,7 +205,7 @@ function OsuFile(basePath, tempPath, forceRedownload, type, id, lastUpdate) {
     }
     Q.when(this.isChecked).then(function () {
         if (that.toDownload === true) {
-            //console.log('File %s ', that.filePath, that.downloadReason);
+           // console.log('File %s ', that.filePath, that.downloadReason);
         }
     })
 }

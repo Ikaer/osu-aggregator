@@ -18,7 +18,7 @@ var Cookie = tough.Cookie;
 var http = require('http-debug').http;
 
 var mapTools = require('./mapTools')
-var osuFiles = require('./osuFiles');
+var osuFiles = require('./beatmapFiles');
 function wLog(msg){
     console.log(msg);
 }
@@ -50,6 +50,7 @@ Analyze.prototype.updateFileInfoInDatabase = function () {
         simpleB.image_403 = that.files.image.get403 ? new Date() : null;
         simpleB.largeImage_403 = that.files.largeImage.get403 ? new Date() : null;
         simpleB.osz_403 = that.files.osz.get403 ? new Date() : null;
+        simpleB.downloadIsNoLongerAvailable = that.files.osz.downloadIsNoLongerAvailable ? that.files.osz.downloadIsNoLongerAvailable : false;
         Beatmap.findOneAndUpdate({'beatmap_id': beatmap.beatmap_id}, simpleB, {upsert: false}, function (err, doc) {
             if (err) {
                 console.log(err);
@@ -144,7 +145,9 @@ Analyze.prototype.filesMustBeUpdated = function () {
             || moment(databaseBeatmap.approved_date).isBefore(moment(jsonBeatmap.approved_date))
             || databaseBeatmap.approved !== jsonBeatmap.approved);
 
+
             if (databaseBeatmap !== null) {
+                that.files.osz.downloadIsNoLongerAvailable = (databaseBeatmap.downloadIsNoLongerAvailable && true === databaseBeatmap.downloadIsNoLongerAvailable);
                 that.files.mp3.get403 = (databaseBeatmap.mp3_403 !== undefined && databaseBeatmap.mp3_403 !== null);
                 that.files.image.get403 = (databaseBeatmap.image_403 !== undefined && databaseBeatmap.image_403 !== null);
                 that.files.largeImage.get403 = (databaseBeatmap.largeImage_403 !== undefined && databaseBeatmap.largeImage_403 !== null);
@@ -165,7 +168,7 @@ Analyze.prototype.filesMustBeUpdated = function () {
         var databaseIsOk = !(_.where(values, {value: true}).length > 0);
         Q.allSettled(fileVerifications).then(function () {
             var filesToDownload = _.filter(that.files.list, function (f) {
-                return f.toDownload === true && f.get403 === false;
+                return f.toDownload === true && f.get403 === false && f.downloadIsNoLongerAvailable !== true;
             })
             var filesAreOk = filesToDownload.length === 0;
 

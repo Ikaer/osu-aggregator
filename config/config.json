@@ -1,8 +1,0 @@
-{
-  "configs":[
-    "downloader2015",
-    "downloaderOlder",
-    "graveyardCrawler",
-    "pendingCrawler"
-  ]
-}

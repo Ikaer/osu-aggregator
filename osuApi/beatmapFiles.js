@@ -16,7 +16,7 @@ var tough = require('tough-cookie');
 var Cookie = tough.Cookie;
 
 var http = require('http-debug').http;
-var OsuFile = require('./osuFile')
+var OsuFile = require('./beatmapFile')
 function OsuFiles(basePath, tempPath, forceRedownload, beatmapSetId, lastUpdate) {
     this.baseDir = basePath + beatmapSetId;
     this.osz = OsuFile.get(basePath, tempPath, forceRedownload, 'osz', beatmapSetId, lastUpdate);

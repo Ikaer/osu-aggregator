@@ -9,7 +9,7 @@ var fs = require('fs');
 var util = require('util');
 var _ = require('underscore');
 require('colors');
-
+var S = require('string');
 
 var request = require('request');
 var tough = require('tough-cookie');
@@ -53,11 +53,22 @@ function DownloadQueueManager(config) {
     that.deferredId = 0;
     that.pileOfCurrentCalls = [];
     that.isConnectedDefer.resolve(true);
+    that.timeoutHealthy = null;
+    that.monitoredIds = [];
 }
+
 //url: 'https://osu.ppy.sh/api/get_scores?k='+that.apiKey+'&b=737331&mods=0',
 DownloadQueueManager.prototype.doHttpCall = function (nextCall) {
     var d = Q.defer();
     var that = this;
+    if (nextCall.options.url) {
+        if (that.monitoredIds.indexOf(nextCall.options.id) >= 0) {
+            console.log('downloading again beatmapset ' + nextCall.options.id)
+        }
+        else {
+            console.log('downloading beatmapset' + nextCall.options.id)
+        }
+    }
     that.deferredId++;
     var traceOfDef = {
         id: that.deferredId,
@@ -70,6 +81,11 @@ DownloadQueueManager.prototype.doHttpCall = function (nextCall) {
         if (err.message == 'timeout') {
             console.error('Take too much time to resolve %s. Go elsewhere', nextCall.options.hostname + nextCall.options.path)
         }
+        else if (err == '503 Service Temporarily Unavailable') {
+            console.log('login service responds 503 for beatmapset ' + nextCall.options.id);
+            that.monitoredIds.push(nextCall.options.id);
+            that.transferPile.unshift(nextCall);
+        }
         else {
             console.error(err);
         }
@@ -80,22 +96,6 @@ DownloadQueueManager.prototype.doHttpCall = function (nextCall) {
     })
     //console.log('%s'.bgBlue.white, nextCall.options.hostname + nextCall.options.path)
     try {
-        //if (nextCall.options.isScoreUrl === true) {
-        //    request.get('https://osu.ppy.sh/api/get_scores?k=' + that.apiKey + '&b=' + nextCall.options.beatmapId + '&mods=0', function (error, response, body) {
-        //        if (error === null) {
-        //            var scores = JSON.parse(body);
-        //            if(scores.length >0){
-        //                var bestScore = scores[0];
-        //                if(bestScore.rank==="XH" && bestScore.perfect === "1")
-        //            }
-        //            nextCall.callback(score);
-        //        }
-        //        else{
-        //
-        //        }
-        //    });
-        //}
-        //else
         if (nextCall.options.url) {
             request.post(
                 'https://osu.ppy.sh/forum/ucp.php?mode=login',
@@ -119,6 +119,14 @@ DownloadQueueManager.prototype.doHttpCall = function (nextCall) {
                                     nextCall.callbackError(res.statusCode, d);
                                 }
                             })
+                    }
+                    else {
+                        if (S(body).contains('503 Service Temporarily Unavailable')) {
+                            d.reject('503 Service Temporarily Unavailable')
+                        }
+                        else {
+                            d.reject(nextCall.options.id + ': Unknow reason')
+                        }
                     }
                 }
             );
@@ -144,15 +152,21 @@ DownloadQueueManager.prototype.doHttpCall = function (nextCall) {
     }
     return d.promise;
 }
+
 DownloadQueueManager.prototype.doNextCall = function () {
     var that = this;
     try {
         if (that.transferPile.length > 0) {
             for (var i = 0; i < that.maxTransfer; i++) {
                 if (that.currentTransferCount < that.maxTransfer && that.transferPile.length > 0) {
+                    clearTimeout(that.timeoutHealthy);
                     var nextCall = that.transferPile[0];
                     that.currentTransferCount++;
                     that.transferPile.shift();
+                    that.timeoutHealthy = setTimeout(function () {
+                        console.error('process safety has been triggered, process will now exit')
+                        process.exit(0)
+                    }, 1000 * 60 * 2); // 2minutes
                     Q.when(that.doHttpCall(nextCall)).then(function () {
                         that.currentTransferCount--;
                     }).fail(function () {

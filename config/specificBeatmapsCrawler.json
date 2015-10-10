@@ -1,7 +1,7 @@
 {
   "timeoutToTransferFiles" : 2000,
-  "maxTransfer" : 2,
-  "forceRedownload" : true,
+  "maxTransfer" : 1,
+  "forceRedownload" : false,
   "dateInf": null,
   "dateSup": null,
   "revert":true,
@@ -9,5 +9,5 @@
   "activeFileSizeCheck": false,
   "startFileUpdater":true,
   "tempFolder":"specific",
-  "ids":[335828,243319,342162,301189,272679]
+  "ids":[90784]
 }

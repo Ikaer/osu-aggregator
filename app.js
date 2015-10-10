@@ -49,18 +49,18 @@ var dbConnect = function () {
                             crawler = new ScoresCrawler(config);
                             break;
                         case 'crawler':
-                            var Crawler = require('./crawlerFactory');
+                            var Crawler = require('./osuWebsiteInformationParser');
                             crawler = new Crawler(config)
                             break;
                         case 'graveyardCrawler':
                         case 'pendingCrawler':
                         case 'rankedCrawler':
-                            var websiteCrawler = require('./osuApi/websiteBeatmapCrawler')
+                            var websiteCrawler = require('./osuApi/osuWebsiteCrawler')
                             crawler = websiteCrawler.get(config);
                             break;
                         case 'downloader2015':
                         case 'downloaderOlder':
-                            var apiCrawlerFactory = require('./osuApi/crawler');
+                            var apiCrawlerFactory = require('./osuApi/osuAPICrawler');
                             crawler = apiCrawlerFactory.get(config);
                             break;
                     }
