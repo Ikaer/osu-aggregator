@@ -49,8 +49,8 @@ var dbConnect = function () {
                             crawler = new ScoresCrawler(config);
                             break;
                         case 'crawler':
-                            var Crawler = require('./osuApi/osuWebsiteInformationParser');
-                            crawler = new Crawler(config)
+                           // var Crawler = require('./osuApi/osuWebsiteInformationParser');
+                            //crawler = new Crawler(config)
                             break;
                         case 'graveyardCrawler':
                         case 'pendingCrawler':
