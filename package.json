@@ -20,7 +20,7 @@
     "guid": "0.0.12",
     "http-debug": "^0.1.2",
     "jade": "~1.9.2",
-    "jquery": "^2.1.4",
+    "jquery": "^3.0.0",
     "jsonfile": "^2.2.1",
     "jszip": "^2.5.0",
     "less-middleware": "1.0.x",
